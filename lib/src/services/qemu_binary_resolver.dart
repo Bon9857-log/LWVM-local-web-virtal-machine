@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:path/path.dart' as p;
 import '../models/platform_capabilities.dart';
 
 class QemuBinaryResolver {
@@ -18,11 +19,11 @@ class QemuBinaryResolver {
       }
     }
 
-    if (capabilities.isChromeOS) {
-      final arch = capabilities.nativeArch == 'arm64' ? 'aarch64' : 'x86_64';
-      final bundledPath = _getBundledBinaryPath(Platform.isAndroid, arch);
-      if (await _binaryExists(bundledPath)) {
-        return bundledPath;
+    if (capabilities.isChromeOS || Platform.isAndroid) {
+      final arch = _getArchString(capabilities.nativeArch);
+      final extractedPath = await _extractBinaryIfNeeded(arch);
+      if (extractedPath != null) {
+        return extractedPath;
       }
     }
 
@@ -37,7 +38,7 @@ class QemuBinaryResolver {
       }
 
       final bundledPath = _getBundledBinaryPath(
-        Platform.isAndroid,
+        false,
         capabilities.nativeArch,
       );
       if (await _binaryExists(bundledPath)) {
@@ -48,24 +49,59 @@ class QemuBinaryResolver {
     return null;
   }
 
+  String _getArchString(String nativeArch) {
+    if (nativeArch == 'arm64') return 'aarch64';
+    return 'x86_64';
+  }
+
+  Future<String?> _extractBinaryIfNeeded(String arch) async {
+    try {
+      final appDocDir = await _getAppDocDir();
+      final binaryName = 'qemu-system-$arch';
+      final targetPath = p.join(appDocDir, binaryName);
+
+      final targetFile = File(targetPath);
+      if (await targetFile.exists()) {
+        await targetFile.setExecutable();
+        return targetPath;
+      }
+
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String> _getAppDocDir() async {
+    if (Platform.isAndroid) {
+      return '/data/data/com.lwvm.app/files';
+    }
+    final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? '';
+    return home.isEmpty ? '.' : home;
+  }
+
   String _getSystemBinaryPath() {
     if (Platform.isWindows) {
       return Platform.environment['LOCALAPPDATA'] != null
           ? '${Platform.environment['LOCALAPPDATA']}/qemu/qemu-system-x86_64.exe'
           : 'C:\\Program Files\\qemu\\qemu-system-x86_64.exe';
     }
+    if (Platform.isMacOS) {
+      return '/usr/local/bin/qemu-system-x86_64';
+    }
     return '/usr/bin/qemu-system-x86_64';
   }
 
   String _getBundledBinaryPath(bool isAndroid, String arch) {
+    final qemuArch = arch == 'arm64' ? 'aarch64' : 'x86_64';
     if (isAndroid) {
-      return '$_androidAssetsPath/$arch/qemu-system-$arch';
+      return '${_androidAssetsPath}/$qemuArch/qemu-system-$qemuArch';
     }
     if (Platform.isWindows) {
-      return '$_windowsAssetsPath/x86_64/qemu-system-x86_64.exe';
+      return '${_windowsAssetsPath}/x86_64/qemu-system-x86_64.exe';
     }
     if (Platform.isMacOS) {
-      return '$_macosAssetsPath/x86_64/qemu-system-x86_64';
+      return '${_macosAssetsPath}/x86_64/qemu-system-x86_64';
     }
     return 'qemu-system-x86_64';
   }

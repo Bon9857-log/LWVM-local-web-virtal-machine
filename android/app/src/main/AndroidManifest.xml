@@ -2,9 +2,10 @@
     package="com.lwvm.app">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
-        android:label="lwvm"
+        android:label="@string/app_name"
         android:requestLegacyExternalStorage="true"
         android:usesCleartextTraffic="true"
         android:label="@string/app_name"

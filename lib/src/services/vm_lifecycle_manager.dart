@@ -10,6 +10,7 @@ import 'guest_agent_client.dart';
 import 'qemu_command_builder.dart';
 import 'qemu_binary_resolver.dart';
 import 'windows_whpx_backend.dart';
+import 'android_qemu_extractor.dart';
 
 class VmLifecycleManager {
   final PlatformCapabilities capabilities;
@@ -50,7 +51,14 @@ class VmLifecycleManager {
     _setState(vmId, VmState.starting);
 
     try {
-      final binaryPath = await binaryResolver.resolveBinaryPath(null);
+      String? binaryPath;
+      
+      if (Platform.isAndroid || capabilities.isChromeOS) {
+        final arch = capabilities.nativeArch ?? 'x86_64';
+        binaryPath = await AndroidQemuExtractor.extractQemuBinary(arch);
+      }
+      
+      binaryPath ??= await binaryResolver.resolveBinaryPath(null);
 
       if (binaryPath == null) {
         _setState(vmId, VmState.error);

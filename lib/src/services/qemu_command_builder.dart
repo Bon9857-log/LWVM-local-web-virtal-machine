@@ -38,8 +38,9 @@ class QemuCommandBuilder {
   }
 
   void _addAccelerationArgs(List<String> args, VmInstance vm) {
-    if (capabilities.isChromeOS) {
+    if (capabilities.isChromeOS || Platform.isAndroid) {
       args.addAll(['-accel', 'tcg,thread=multi']);
+      args.addAll(['-cpu', 'max']);
     } else if (capabilities.hasKvm) {
       args.addAll(['-accel', 'kvm', '-cpu', 'host']);
     } else if (capabilities.hasHyperV) {
@@ -163,6 +164,9 @@ class QemuCommandBuilder {
   }
 
   static String _vmDirectory(String vmId) {
+    if (Platform.isAndroid) {
+      return p.join('/data/data/com.lwvm.app/files', '.lwvm', 'vms', vmId);
+    }
     return p.join(_homeDirectory(), '.lwvm', 'vms', vmId);
   }
 
