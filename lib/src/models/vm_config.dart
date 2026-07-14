@@ -19,15 +19,15 @@ class VmConfig with _$VmConfig {
     String? webPort,
     String? httpsPort,
     String? rdpPort,
-    Map<String, int>? customPortForwards,
+    Map<int, int>? customPortForwards,
   }) = _VmConfig;
 
   factory VmConfig.fromJson(Map<String, dynamic> json) => _$VmConfigFromJson(json);
 }
 
 extension VmConfigExtension on VmConfig {
-  Map<String, int> getAllPortForwards() {
-    final forwards = {
+  Map<int, int> getAllPortForwards() {
+    final forwards = <int, int>{
       if (sshPort != null) 22: int.parse(sshPort!),
       if (webPort != null) 80: int.parse(webPort!),
       if (httpsPort != null) 443: int.parse(httpsPort!),
