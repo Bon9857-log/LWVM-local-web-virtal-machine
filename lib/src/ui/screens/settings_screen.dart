@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/providers.dart';
 import '../../models/vm_config.dart';
+import '../../services/offline_mode.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -12,7 +13,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _registryController = TextEditingController(text: 'ghcr.io/org/lwvm-images');
-  bool _offlineMode = false;
   bool _telemetryOptIn = false;
   String _logLevel = 'info';
 
@@ -28,6 +28,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final offlineMode = ref.watch(offlineModeProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
@@ -78,8 +80,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _buildSection('General', [
             SwitchListTile(
               title: const Text('Offline Mode'),
-              value: _offlineMode,
-              onChanged: (v) => setState(() => _offlineMode = v),
+              subtitle: const Text('Disables network operations, shows cached images only'),
+              value: offlineMode,
+              onChanged: (v) {
+                ref.read(offlineModeProvider.notifier).state = v;
+              },
             ),
             SwitchListTile(
               title: const Text('Telemetry Opt-in'),
@@ -97,6 +102,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   title: const Text('Image Cache Size'),
                   subtitle: Text('${(size / 1024 / 1024).toStringAsFixed(1)} MB'),
                   trailing: TextButton(onPressed: _clearCache, child: const Text('Clear')),
+                );
+              },
+            ),
+          ]),
+          const SizedBox(height: 24),
+          _buildSection('Offline Package Cache', [
+            FutureBuilder<String>(
+              future: OfflineModeService().getPackageMirrorUrl(),
+              builder: (context, snapshot) {
+                return ListTile(
+                  title: const Text('Package Mirror URL'),
+                  subtitle: Text(snapshot.data ?? 'http://10.0.2.2:9999/packages'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _refreshPkgCache,
+                  ),
+                );
+              },
+            ),
+            FutureBuilder<int>(
+              future: _getPkgCacheSize(),
+              builder: (context, snapshot) {
+                final size = snapshot.data ?? 0;
+                return ListTile(
+                  title: const Text('Package Cache Size'),
+                  subtitle: Text('${(size / 1024 / 1024).toStringAsFixed(1)} MB'),
                 );
               },
             ),
@@ -148,4 +179,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<int> _getCacheSize() async => 0;
   void _clearCache() {}
+  
+  Future<int> _getPkgCacheSize() async {
+    final cacheDir = await OfflineModeService().getPkgCacheDir();
+    if (!await cacheDir.exists()) return 0;
+    int total = 0;
+    await for (final file in cacheDir.list(recursive: true)) {
+      if (file is File) {
+        total += await file.length();
+      }
+    }
+    return total;
+  }
+  
+  void _refreshPkgCache() {}
 }

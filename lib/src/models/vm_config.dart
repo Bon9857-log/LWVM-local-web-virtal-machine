@@ -5,6 +5,8 @@ part 'vm_config.g.dart';
 
 enum GuestOS { alpine, ubuntu, zorin }
 
+enum ImageType { minimal, thickDev, thickWebdev, thickDatasci, thickMinimal }
+
 enum GraphicsBackend { spice, vnc }
 
 @freezed
@@ -14,6 +16,7 @@ class VmConfig with _$VmConfig {
     @Default(2048) int ram,
     @Default(20) int diskSize,
     @Default(GuestOS.alpine) GuestOS guestOS,
+    @Default(ImageType.minimal) ImageType imageType,
     @Default(GraphicsBackend.spice) GraphicsBackend graphics,
     String? sshPort,
     String? webPort,

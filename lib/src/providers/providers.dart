@@ -5,6 +5,13 @@ import '../services/platform_service.dart';
 import '../services/qemu_binary_resolver.dart';
 import '../services/vm_lifecycle_manager.dart';
 import '../services/provisioning_service.dart';
+import '../services/offline_mode.dart';
+
+final offlineModeProvider = StateProvider<bool>((ref) => false);
+
+final offlineModeServiceProvider = Provider.autoDispose<OfflineModeService>((ref) {
+  return OfflineModeService();
+});
 
 final platformCapabilitiesProvider = FutureProvider<PlatformCapabilities>((ref) async {
   return PlatformService.detect();
