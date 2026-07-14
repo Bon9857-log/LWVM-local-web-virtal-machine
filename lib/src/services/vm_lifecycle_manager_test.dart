@@ -35,36 +35,17 @@ void main() {
 
     group('guest agent', () {
       test('getGuestAgent creates client with correct socket path', () async {
-        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
+        final vm = VmInstance(
+          id: 'test-vm',
+          config: const VmConfig(),
+          overlayPath: '/vms/test-vm/overlay.qcow2',
+          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
+        );
 
         final client = await manager.getGuestAgent(vm);
 
         expect(client, isNotNull);
       });
     });
-  });
-}
-
-dynamic _createTestVm(String id, String overlayPath, {VmConfig? config}) {
-  final configObj = config ?? VmConfig();
-  return _VmInstance(
-    id: id,
-    config: configObj,
-    overlayPath: overlayPath,
-    dataDiskPath: '$overlayPath-data',
-  );
-}
-
-class _VmInstance {
-  final String id;
-  final VmConfig config;
-  final String overlayPath;
-  final String dataDiskPath;
-
-  _VmInstance({
-    required this.id,
-    required this.config,
-    required this.overlayPath,
-    required this.dataDiskPath,
   });
 }

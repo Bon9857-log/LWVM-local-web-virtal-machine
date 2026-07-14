@@ -104,14 +104,31 @@ class PlatformService {
     try {
       final result = await Process.run('powershell', [
         '-Command',
-        'Get-WmiObject -Class Win32_ComputerSystem | Select-Object -ExpandProperty Model',
+        'Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Hyper-V-Hypervisor -ErrorAction SilentlyContinue | Select-Object -ExpandProperty State',
       ]);
-      return result.exitCode == 0 &&
-          (result.stdout.toString().contains('Virtual') ||
-              result.stdout.toString().contains('Virtual Machine'));
-    } catch (_) {
-      return false;
-    }
+      if (result.exitCode == 0 && result.stdout.toString().trim() == 'Enabled') {
+        return true;
+      }
+      try {
+        final wmiResult = await Process.run('powershell', [
+          '-Command',
+          'Get-WmiObject -Class Win32_ComputerSystem | Select-Object -ExpandProperty HypervisorPresent',
+        ]);
+        if (wmiResult.exitCode == 0 && wmiResult.stdout.toString().trim() == 'True') {
+          return true;
+        }
+      } catch (_) {}
+      try {
+        final hvStatus = await Process.run('powershell', [
+          '-Command',
+          '(Get-CimInstance -ClassName Win32_ComputerSystem).Model -match "Virtual|Virtual Machine"',
+        ]);
+        if (hvStatus.exitCode == 0 && hvStatus.stdout.toString().trim() == 'True') {
+          return true;
+        }
+      } catch (_) {}
+    } catch (_) {}
+    return false;
   }
 
   static Future<bool> _detectVirtFramework() async {

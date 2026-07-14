@@ -41,9 +41,9 @@ class QemuCommandBuilder {
     if (capabilities.isChromeOS) {
       args.addAll(['-accel', 'tcg,thread=multi']);
     } else if (capabilities.hasKvm) {
-      args.addAll(['-enable-kvm', '-cpu', 'host']);
+      args.addAll(['-accel', 'kvm', '-cpu', 'host']);
     } else if (capabilities.hasHyperV) {
-      args.addAll(['-accel', 'whpx']);
+      args.addAll(['-accel', 'whpx', '-cpu', 'host']);
     } else {
       args.addAll(['-accel', 'tcg']);
     }
