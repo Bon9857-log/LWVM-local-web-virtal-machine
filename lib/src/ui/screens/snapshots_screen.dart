@@ -11,10 +11,10 @@ class SnapshotsScreen extends ConsumerStatefulWidget {
   const SnapshotsScreen({super.key, required this.vm});
 
   @override
-  ConsumerState<S napshotsScreen> createState() => _SnapshotsScreenState();
+  ConsumerState<SnapshotsScreen> createState() => _SnapshotsScreenState();
 }
 
-class _SnapshotsScreenState extends ConsumerState<S napshotsScreen> {
+class _SnapshotsScreenState extends ConsumerState<SnapshotsScreen> {
   late Future<List<Snapshot>> _snapshotsFuture;
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();

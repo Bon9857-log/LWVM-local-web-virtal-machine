@@ -145,7 +145,21 @@ class SnapshotManager {
       name,
       vm.overlayPath,
     ]);
-    return result.exitCode == 0;
+    
+    if (result.exitCode != 0) return false;
+    
+    // Clean up metadata file
+    try {
+      final metaDir = await _getSnapshotMetaDir(vm);
+      final metaFile = File(p.join(metaDir.path, '$name.json'));
+      if (await metaFile.exists()) {
+        await metaFile.delete();
+      }
+    } catch (_) {
+      // Ignore metadata cleanup errors
+    }
+    
+    return true;
   }
 
   Future<bool> createBranch(VmInstance vm, String branchName, String snapshotName) async {
