@@ -3,6 +3,20 @@ import '../models/platform_capabilities.dart';
 import '../models/vm_config.dart';
 import 'qemu_command_builder.dart';
 
+class _VmInstance {
+  final String id;
+  final VmConfig config;
+  final String overlayPath;
+  final String dataDiskPath;
+
+  _VmInstance({
+    required this.id,
+    required this.config,
+    required this.overlayPath,
+    required this.dataDiskPath,
+  });
+}
+
 void main() {
   group('QemuCommandBuilder', () {
     late QemuCommandBuilder builder;
@@ -184,7 +198,7 @@ void main() {
         expect(args.any((a) => a.contains('virtio-net-pci')), true);
       });
 
-      test('includes guest agent virtio-serial-pci with VNC', () {
+test('includes guest agent virtio-serial-pci with VNC', () {
         final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2', graphics: GraphicsBackend.vnc);
 
         final args = builder.build(vm);
@@ -192,6 +206,18 @@ void main() {
         expect(args.any((a) => a.contains('virtio-serial-pci')), true);
         expect(args.any((a) => a.contains('guest-agent.sock')), true);
         expect(args.any((a) => a.contains('org.qemu.guest_agent.0')), true);
+      });
+
+      test('includes WebDAV port forward when sharedFolder configured', () {
+        final vm = _createTestVm(
+          'test-vm',
+          '/vms/test-vm/overlay.qcow2',
+          config: const VmConfig(sharedFolder: '/home/user/Projects'),
+        );
+
+        final args = builder.build(vm);
+
+        expect(args.any((a) => a.contains('hostfwd=tcp:127.0.0.1:9999-:9999')), true);
       });
     });
   });
@@ -205,18 +231,4 @@ dynamic _createTestVm(String id, String overlayPath, {VmConfig? config, Graphics
     overlayPath: overlayPath,
     dataDiskPath: '$overlayPath-data',
   );
-}
-
-class _VmInstance {
-  final String id;
-  final VmConfig config;
-  final String overlayPath;
-  final String dataDiskPath;
-
-  _VmInstance({
-    required this.id,
-    required this.config,
-    required this.overlayPath,
-    required this.dataDiskPath,
-  });
 }

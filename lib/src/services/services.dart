@@ -2,5 +2,8 @@ export 'platform_service.dart';
 export 'qemu_binary_resolver.dart';
 export 'qemu_command_builder.dart';
 export 'vm_lifecycle_manager.dart';
+export 'vm_storage_manager.dart';
+export 'vm_provisioning_service.dart';
 export 'port_forward_manager.dart';
 export 'guest_agent_client.dart';
+export 'webdav_server.dart';

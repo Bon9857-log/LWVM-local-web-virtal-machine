@@ -104,6 +104,10 @@ class QemuCommandBuilder {
 
     final forwards = {...vm.config.getDefaultPortForwards(), ...customForwards};
 
+    if (vm.config.sharedFolder != null) {
+      forwards[9999] = 9999;
+    }
+
     final forwardRules = forwards.entries.map((e) => 'hostfwd=tcp:127.0.0.1:${e.value}-:${e.key}').join(',');
 
     args.addAll([

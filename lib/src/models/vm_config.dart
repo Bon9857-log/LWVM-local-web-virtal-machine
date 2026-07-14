@@ -20,6 +20,7 @@ class VmConfig with _$VmConfig {
     String? httpsPort,
     String? rdpPort,
     Map<int, int>? customPortForwards,
+    String? sharedFolder,
   }) = _VmConfig;
 
   factory VmConfig.fromJson(Map<String, dynamic> json) => _$VmConfigFromJson(json);
@@ -47,4 +48,6 @@ extension VmConfigExtension on VmConfig {
       3389: 3389,
     };
   }
+
+  int get webdavPort => 9999;
 }
