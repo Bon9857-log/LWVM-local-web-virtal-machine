@@ -9,6 +9,7 @@ import '../models/vm_instance.dart';
 import 'guest_agent_client.dart';
 import 'qemu_command_builder.dart';
 import 'qemu_binary_resolver.dart';
+import 'webdav_server.dart';
 
 class VmLifecycleManager {
   final PlatformCapabilities capabilities;
@@ -20,6 +21,7 @@ class VmLifecycleManager {
   final Map<String, StreamController<VmState>> _stateControllers = {};
   final Map<String, StreamController<String>> _logControllers = {};
   final Map<String, GuestAgentClient> _guestAgents = {};
+  final Map<String, WebdavServer> _webdavServers = {};
 
   VmLifecycleManager(this.capabilities)
       : binaryResolver = QemuBinaryResolver(capabilities),
@@ -58,6 +60,15 @@ class VmLifecycleManager {
 
       await binaryResolver.makeExecutable(binaryPath);
 
+      if (vm.config.sharedFolder != null) {
+        final webdav = WebdavServer(
+          vmId: vmId,
+          hostFolder: vm.config.sharedFolder!,
+        );
+        await webdav.start();
+        _webdavServers[vmId] = webdav;
+      }
+
       final args = commandBuilder.build(vm);
       final logPath = vm.logPath ?? commandBuilder.buildLogPath(vmId);
       final logFile = File(logPath);
@@ -76,7 +87,21 @@ class VmLifecycleManager {
       _runningProcesses[vmId] = process;
       _setState(vmId, VmState.running);
 
-      _setupProcessListeners(vmId, process);
+      process.stdout.listen((data) {
+        _logControllers[vmId]?.add(data);
+      });
+
+      process.stderr.listen((data) {
+        _logControllers[vmId]?.add(data);
+      });
+
+      process.exitCode.then((code) {
+        _runningProcesses.remove(vmId);
+        _webdavServers.remove(vmId)?.stop();
+        if (_vmStates[vmId] != VmState.stopping) {
+          _setState(vmId, VmState.error);
+        }
+      });
     } catch (e) {
       _logControllers[vmId]?.add('Failed to start VM: $e\n');
       _setState(vmId, VmState.error);
@@ -140,6 +165,7 @@ class VmLifecycleManager {
     }
 
     _runningProcesses.remove(vmId);
+    _webdavServers.remove(vmId)?.stop();
     _guestAgents.remove(vmId);
     _setState(vmId, VmState.stopped);
   }
@@ -182,6 +208,10 @@ class VmLifecycleManager {
   }
 
   void dispose() {
+    for (final webdav in _webdavServers.values) {
+      webdav.stop();
+    }
+    _webdavServers.clear();
     for (final controller in _stateControllers.values) {
       controller.close();
     }
