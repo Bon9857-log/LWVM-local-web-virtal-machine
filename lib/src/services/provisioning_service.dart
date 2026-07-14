@@ -3,6 +3,7 @@ import 'package:path/path.dart' as p;
 import '../models/vm_config.dart';
 import '../models/vm_instance.dart';
 import '../models/guest_os_image.dart';
+import '../models/platform_capabilities.dart';
 import 'qemu_binary_resolver.dart';
 import 'qemu_command_builder.dart';
 
@@ -16,7 +17,7 @@ class ProvisioningService {
 
   Future<VmInstance> createVm(VmConfig config, {String? vmId}) async {
     final id = vmId ?? 'vm-${DateTime.now().millisecondsSinceEpoch}';
-    final vmDir = _vmDirectory(id);
+    final vmDir = await _vmDirectory(id);
     final overlayPath = p.join(vmDir, 'overlay.qcow2');
     final dataDiskPath = p.join(vmDir, 'data.qcow2');
 
@@ -35,9 +36,9 @@ class ProvisioningService {
   }
 
   Future<void> _createOverlayDisk(String path) async {
-    final cmd = Platform.isWindows ? 'qemu-img.exe' : 'qemu-img';
-    final args = ['create', '-f', 'qcow2', '-b', await _getBaseImagePath(), path];
+    final baseImagePath = await _getBaseImagePath();
     
+    final args = ['create', '-f', 'qcow2', '-b', baseImagePath, path];
     final qemuPath = await binaryResolver.resolveBinaryPath('qemu-img');
     if (qemuPath != null) {
       await Process.run(qemuPath, args);
@@ -75,6 +76,9 @@ class ProvisioningService {
   }
 
   static Future<String> _getHomeDir() async {
+    if (Platform.isAndroid) {
+      return '/data/data/com.lwvm.app/files';
+    }
     var home = Platform.environment['HOME'];
     if (home == null || home.isEmpty) {
       home = Platform.environment['USERPROFILE'];
