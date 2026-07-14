@@ -38,4 +38,13 @@ extension VmConfigExtension on VmConfig {
     }
     return forwards;
   }
+
+  Map<int, int> getDefaultPortForwards() {
+    return const <int, int>{
+      22: 2222,
+      80: 8080,
+      443: 8443,
+      3389: 3389,
+    };
+  }
 }
