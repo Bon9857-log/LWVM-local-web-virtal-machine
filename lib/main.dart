@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'src/providers/providers.dart';
 
 void main() {
-  runApp(const ProviderScope(child: lwvmApp()));
+  runApp(const ProviderScope(child: LwvmApp()));
 }
 
-class lwvmApp extends ConsumerWidget {
-  const lwvmApp({super.key});
+class LwvmApp extends StatelessWidget {
+  const LwvmApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return MaterialApp(
       title: 'LWVM',
       theme: ThemeData(
@@ -19,7 +18,7 @@ class lwvmApp extends ConsumerWidget {
       ),
       home: const Scaffold(
         body: Center(
-          child: Text('LWVM - VM Platform'),
+          child: Text('LWVM - ChromeOS VM Platform', style: TextStyle(fontSize: 24)),
         ),
       ),
     );
