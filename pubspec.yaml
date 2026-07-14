@@ -29,3 +29,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/qemu/android/arm64/
+    - assets/qemu/android/x86_64/

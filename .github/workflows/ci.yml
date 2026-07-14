@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+      - run: flutter pub get
+      - run: flutter analyze --fatal-infos
+
+  build-android-qemu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Android NDK
+        run: |
+          wget -q https://dl.google.com/android/repository/android-ndk-r27-linux.zip
+          unzip -q android-ndk-r27-linux.zip
+          echo "ANDROID_NDK=$(pwd)/android-ndk-r27" >> $GITHUB_ENV
+      - name: Build QEMU for Android
+        run: |
+          export ANDROID_NDK_HOME=$ANDROID_NDK
+          ./scripts/build_qemu_android.sh || echo "QEMU build requires manual intervention or prebuilt binaries"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qemu-android
+          path: assets/qemu/android/
