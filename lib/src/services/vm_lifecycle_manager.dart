@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import '../models/platform_capabilities.dart';
 import '../models/vm_config.dart';
 import '../models/vm_instance.dart';
+import 'guest_agent_client.dart';
 import 'qemu_command_builder.dart';
 import 'qemu_binary_resolver.dart';
 
@@ -18,6 +19,7 @@ class VmLifecycleManager {
   final Map<String, VmState> _vmStates = {};
   final Map<String, StreamController<VmState>> _stateControllers = {};
   final Map<String, StreamController<String>> _logControllers = {};
+  final Map<String, GuestAgentClient> _guestAgents = {};
 
   VmLifecycleManager(this.capabilities)
       : binaryResolver = QemuBinaryResolver(capabilities),
@@ -74,24 +76,38 @@ class VmLifecycleManager {
       _runningProcesses[vmId] = process;
       _setState(vmId, VmState.running);
 
-      process.stdout.listen((data) {
-        _logControllers[vmId]?.add(data);
-      });
-
-      process.stderr.listen((data) {
-        _logControllers[vmId]?.add(data);
-      });
-
-      process.exitCode.then((code) {
-        _runningProcesses.remove(vmId);
-        if (_vmStates[vmId] != VmState.stopping) {
-          _setState(vmId, VmState.error);
-        }
-      });
+      _setupProcessListeners(vmId, process);
     } catch (e) {
       _logControllers[vmId]?.add('Failed to start VM: $e\n');
       _setState(vmId, VmState.error);
     }
+  }
+
+  void _setupProcessListeners(String vmId, Process process) {
+    process.stdout.listen((data) {
+      _logControllers[vmId]?.add(data);
+    });
+
+    process.stderr.listen((data) {
+      _logControllers[vmId]?.add(data);
+    });
+
+    process.exitCode.then((code) {
+      _runningProcesses.remove(vmId);
+      _guestAgents.remove(vmId);
+      if (_vmStates[vmId] != VmState.stopping) {
+        _setState(vmId, VmState.error);
+      }
+    });
+  }
+
+  Future<GuestAgentClient> getGuestAgent(VmInstance vm) async {
+    final vmId = vm.id;
+    if (!_guestAgents.containsKey(vmId)) {
+      final gaSocketPath = p.join(p.dirname(vm.overlayPath), 'guest-agent.sock');
+      _guestAgents[vmId] = GuestAgentClient(gaSocketPath);
+    }
+    return _guestAgents[vmId]!;
   }
 
   Future<void> stop(VmInstance vm, {bool force = false}) async {
@@ -124,6 +140,7 @@ class VmLifecycleManager {
     }
 
     _runningProcesses.remove(vmId);
+    _guestAgents.remove(vmId);
     _setState(vmId, VmState.stopped);
   }
 
@@ -173,5 +190,6 @@ class VmLifecycleManager {
     }
     _stateControllers.clear();
     _logControllers.clear();
+    _guestAgents.clear();
   }
 }

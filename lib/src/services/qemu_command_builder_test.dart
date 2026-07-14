@@ -149,6 +149,20 @@ void main() {
         builder = QemuCommandBuilder(caps);
       });
 
+      test('includes default port forwards SSH and HTTP', () {
+        final vm = _createTestVm(
+          'test-vm',
+          '/vms/test-vm/overlay.qcow2',
+        );
+
+        final args = builder.build(vm);
+
+        expect(args.any((a) => a.contains('hostfwd=tcp:127.0.0.1:2222-:22')), true);
+        expect(args.any((a) => a.contains('hostfwd=tcp:127.0.0.1:8080-:80')), true);
+        expect(args.any((a) => a.contains('hostfwd=tcp:127.0.0.1:8443-:443')), true);
+        expect(args.any((a) => a.contains('hostfwd=tcp:127.0.0.1:3389-:3389')), true);
+      });
+
       test('builds port forwards from config', () {
         final vm = _createTestVm(
           'test-vm',
@@ -168,6 +182,16 @@ void main() {
         final args = builder.build(vm);
 
         expect(args.any((a) => a.contains('virtio-net-pci')), true);
+      });
+
+      test('includes guest agent virtio-serial-pci with VNC', () {
+        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2', graphics: GraphicsBackend.vnc);
+
+        final args = builder.build(vm);
+
+        expect(args.any((a) => a.contains('virtio-serial-pci')), true);
+        expect(args.any((a) => a.contains('guest-agent.sock')), true);
+        expect(args.any((a) => a.contains('org.qemu.guest_agent.0')), true);
       });
     });
   });

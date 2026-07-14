@@ -13,8 +13,12 @@ class PortForwardManager {
     3389: defaultRdpPort,
   };
 
-  List<String> buildNetdevArgs(VmConfig config) {
+  List<String> buildNetdevArgs(VmConfig config, {bool includeDefaultForwards = true}) {
     final forwards = <int, int>{};
+
+    if (includeDefaultForwards) {
+      forwards.addAll(defaultForwards);
+    }
 
     if (config.sshPort != null) {
       forwards[22] = int.parse(config.sshPort!);
@@ -48,8 +52,12 @@ class PortForwardManager {
     ];
   }
 
-  Map<int, int> getAllForwards(VmConfig config) {
+  Map<int, int> getAllForwards(VmConfig config, {bool includeDefaultForwards = true}) {
     final result = <int, int>{};
+
+    if (includeDefaultForwards) {
+      result.addAll(defaultForwards);
+    }
 
     if (config.sshPort != null) {
       result[22] = int.parse(config.sshPort!);
