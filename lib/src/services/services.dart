@@ -6,3 +6,4 @@ export 'port_forward_manager.dart';
 export 'guest_agent_client.dart';
 export 'provisioning_service.dart';
 export 'snapshot_manager.dart';
+export 'windows_whpx_backend.dart';

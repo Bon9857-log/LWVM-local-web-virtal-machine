@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
 import '../models/platform_capabilities.dart';
 import '../models/vm_config.dart';
+import '../models/vm_instance.dart';
 import 'qemu_command_builder.dart';
 
 void main() {
@@ -21,7 +22,12 @@ void main() {
       });
 
       test('uses TCG acceleration with thread=multi', () {
-        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
+        final vm = VmInstance(
+          id: 'test-vm',
+          config: const VmConfig(),
+          overlayPath: '/vms/test-vm/overlay.qcow2',
+          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
+        );
 
         final args = builder.build(vm);
 
@@ -30,7 +36,12 @@ void main() {
       });
 
       test('uses virt machine type', () {
-        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
+        final vm = VmInstance(
+          id: 'test-vm',
+          config: const VmConfig(),
+          overlayPath: '/vms/test-vm/overlay.qcow2',
+          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
+        );
 
         final args = builder.build(vm);
 
@@ -39,7 +50,12 @@ void main() {
       });
 
       test('includes VirtIO disk arguments', () {
-        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
+        final vm = VmInstance(
+          id: 'test-vm',
+          config: const VmConfig(),
+          overlayPath: '/vms/test-vm/overlay.qcow2',
+          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
+        );
 
         final args = builder.build(vm);
 
@@ -48,7 +64,12 @@ void main() {
       });
 
       test('includes SPICE graphics by default', () {
-        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
+        final vm = VmInstance(
+          id: 'test-vm',
+          config: const VmConfig(),
+          overlayPath: '/vms/test-vm/overlay.qcow2',
+          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
+        );
 
         final args = builder.build(vm);
 
@@ -58,7 +79,12 @@ void main() {
       });
 
       test('includes VNC graphics when configured', () {
-        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2', graphics: GraphicsBackend.vnc);
+        final vm = VmInstance(
+          id: 'test-vm',
+          config: const VmConfig(graphics: GraphicsBackend.vnc),
+          overlayPath: '/vms/test-vm/overlay.qcow2',
+          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
+        );
 
         final args = builder.build(vm);
 
@@ -66,7 +92,12 @@ void main() {
       });
 
       test('includes guest agent socket', () {
-        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
+        final vm = VmInstance(
+          id: 'test-vm',
+          config: const VmConfig(),
+          overlayPath: '/vms/test-vm/overlay.qcow2',
+          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
+        );
 
         final args = builder.build(vm);
 
@@ -94,17 +125,28 @@ void main() {
       });
 
       test('uses KVM acceleration', () {
-        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
+        final vm = VmInstance(
+          id: 'test-vm',
+          config: const VmConfig(),
+          overlayPath: '/vms/test-vm/overlay.qcow2',
+          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
+        );
 
         final args = builder.build(vm);
 
-        expect(args, contains('-enable-kvm'));
+        expect(args, contains('-accel'));
+        expect(args, contains('kvm'));
         expect(args, contains('-cpu'));
         expect(args, contains('host'));
       });
 
       test('uses q35 machine type with KVM', () {
-        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
+        final vm = VmInstance(
+          id: 'test-vm',
+          config: const VmConfig(),
+          overlayPath: '/vms/test-vm/overlay.qcow2',
+          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
+        );
 
         final args = builder.build(vm);
 
@@ -126,13 +168,34 @@ void main() {
         builder = QemuCommandBuilder(caps);
       });
 
-      test('uses WHPX acceleration', () {
-        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
+      test('uses WHPX acceleration with host CPU', () {
+        final vm = VmInstance(
+          id: 'test-vm',
+          config: const VmConfig(),
+          overlayPath: '/vms/test-vm/overlay.qcow2',
+          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
+        );
 
         final args = builder.build(vm);
 
         expect(args, contains('-accel'));
         expect(args, contains('whpx'));
+        expect(args, contains('-cpu'));
+        expect(args, contains('host'));
+      });
+
+      test('uses q35 machine type with WHPX', () {
+        final vm = VmInstance(
+          id: 'test-vm',
+          config: const VmConfig(),
+          overlayPath: '/vms/test-vm/overlay.qcow2',
+          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
+        );
+
+        final args = builder.build(vm);
+
+        expect(args, contains('-machine'));
+        expect(args, contains('q35'));
       });
     });
 
@@ -150,9 +213,11 @@ void main() {
       });
 
       test('includes default port forwards SSH and HTTP', () {
-        final vm = _createTestVm(
-          'test-vm',
-          '/vms/test-vm/overlay.qcow2',
+        final vm = VmInstance(
+          id: 'test-vm',
+          config: const VmConfig(),
+          overlayPath: '/vms/test-vm/overlay.qcow2',
+          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
         );
 
         final args = builder.build(vm);
@@ -164,10 +229,11 @@ void main() {
       });
 
       test('builds port forwards from config', () {
-        final vm = _createTestVm(
-          'test-vm',
-          '/vms/test-vm/overlay.qcow2',
+        final vm = VmInstance(
+          id: 'test-vm',
           config: const VmConfig(sshPort: '2222', webPort: '8080'),
+          overlayPath: '/vms/test-vm/overlay.qcow2',
+          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
         );
 
         final args = builder.build(vm);
@@ -177,7 +243,12 @@ void main() {
       });
 
       test('includes virtio-net device', () {
-        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
+        final vm = VmInstance(
+          id: 'test-vm',
+          config: const VmConfig(),
+          overlayPath: '/vms/test-vm/overlay.qcow2',
+          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
+        );
 
         final args = builder.build(vm);
 
@@ -185,7 +256,12 @@ void main() {
       });
 
       test('includes guest agent virtio-serial-pci with VNC', () {
-        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2', graphics: GraphicsBackend.vnc);
+        final vm = VmInstance(
+          id: 'test-vm',
+          config: const VmConfig(graphics: GraphicsBackend.vnc),
+          overlayPath: '/vms/test-vm/overlay.qcow2',
+          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
+        );
 
         final args = builder.build(vm);
 
@@ -194,29 +270,5 @@ void main() {
         expect(args.any((a) => a.contains('org.qemu.guest_agent.0')), true);
       });
     });
-  });
-}
-
-dynamic _createTestVm(String id, String overlayPath, {VmConfig? config, GraphicsBackend? graphics}) {
-  final configObj = config ?? VmConfig(graphics: graphics ?? GraphicsBackend.spice);
-  return _VmInstance(
-    id: id,
-    config: configObj,
-    overlayPath: overlayPath,
-    dataDiskPath: '$overlayPath-data',
-  );
-}
-
-class _VmInstance {
-  final String id;
-  final VmConfig config;
-  final String overlayPath;
-  final String dataDiskPath;
-
-  _VmInstance({
-    required this.id,
-    required this.config,
-    required this.overlayPath,
-    required this.dataDiskPath,
   });
 }

@@ -16,6 +16,7 @@ dependencies:
   process_run: ^0.13.0
   rxdart: ^0.55.0
   path: ^1.9.0
+  msix: ^3.22.0
 
 dev_dependencies:
   flutter_test:
@@ -32,3 +33,4 @@ flutter:
   assets:
     - assets/qemu/android/arm64/
     - assets/qemu/android/x86_64/
+    - assets/virtio/

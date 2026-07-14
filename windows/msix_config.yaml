@@ -1,0 +1,27 @@
+package:
+  name: LWVM
+  version: 0.1.0.0
+  publisher: CN=LocalWebVM
+  identity: LocalWebVM.LWVM
+  
+  display:
+    name: Local Web VM
+    description: ChromeOS-First VM Platform for Windows
+    icon: windows/runner/resources/icon.ico
+    
+  capabilities:
+    - virtualization
+    - internetClientServer
+    - privateNetworkClientServer
+    
+  visualElements:
+    backgroundColor: #FFFFFF
+    splashScreen:
+      image: windows/runner/resources/splash.png
+      
+  framework:
+    minVersion: 10.0.17763.0
+    
+  applications:
+    - executable: LWVM.exe
+      id: LocalWebVM

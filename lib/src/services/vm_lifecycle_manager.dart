@@ -9,6 +9,7 @@ import '../models/vm_instance.dart';
 import 'guest_agent_client.dart';
 import 'qemu_command_builder.dart';
 import 'qemu_binary_resolver.dart';
+import 'windows_whpx_backend.dart';
 
 class VmLifecycleManager {
   final PlatformCapabilities capabilities;
@@ -158,14 +159,18 @@ class VmLifecycleManager {
 
   Map<String, String> _buildEnvironment() {
     final env = Platform.environment;
+    final Map<String, String> result = {...env};
+    
     if (capabilities.isChromeOS) {
-      return {
-        ...env,
-        'QEMU_AUDIO_DRV': 'none',
-        'GUEST_AGENT_SOCK': '/tmp',
-      };
+      result['QEMU_AUDIO_DRV'] = 'none';
+      result['GUEST_AGENT_SOCK'] = '/tmp';
     }
-    return env;
+    
+    if (capabilities.hasHyperV) {
+      result['QEMU_AUDIO_DRV'] = 'none';
+    }
+    
+    return result;
   }
 
   Future<void> cleanupAll() async {

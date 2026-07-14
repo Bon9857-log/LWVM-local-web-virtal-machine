@@ -1,0 +1,15 @@
+{
+  "virtioIsoUrl": "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable/virtio-win.iso",
+  "version": "0.1.242-1",
+  "sha256": "0d0b2c5e8b3a2e9f7c6d4b1a0e3f2c1d5b4a9e8f7c6d3b2a1e0f9c8d7b6a5",
+  "driverPaths": {
+    "x86_64": {
+      "viostor": "viostor/w10/amd64/",
+      "NetKVM": "NetKVM/w10/amd64/",
+      "qemupci": "qemupci/w10/amd64/",
+      "vioscsi": "vioscsi/w10/amd64/",
+      "Balloon": "Balloon/w10/amd64/"
+    }
+  },
+  "notes": "Download from Fedora Project. Required for Windows guest installations in QEMU with VirtIO devices."
+}
