@@ -5,7 +5,26 @@ on:
     types: [created]
 
 jobs:
-  build-and-release:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+      - run: flutter pub get
+      - run: flutter build apk --release --target-platform android-arm64,android-x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk-release
+          path: build/app/outputs/flutter/apks/
+
+  build-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -13,36 +32,60 @@ jobs:
         with:
           flutter-version: '3.24.0'
           channel: 'stable'
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
       - run: flutter pub get
+      - run: flutter build linux --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: appimage
+          path: build/linux/x64/release/bundle/
 
-      - name: Build Android APK
-        run: flutter build apk --release --target-platform android-arm64,android-x64
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+      - run: flutter pub get
+      - run: flutter build windows --release
+      - uses: microsoft/msbuild@v1
+        with:
+          solution: 'windows/runner/LWVM.sln'
+          configuration: Release
+          platform: x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msix
+          path: build/windows/runner/Release/
 
-      - name: Build Linux AppImage
-        run: flutter build linux --release
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+      - run: flutter pub get
+      - run: flutter build macos --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dmg
+          path: build/macos/x64/Release/
 
-      - name: Build Windows MSIX
-        run: |
-          flutter build windows --release
-          cd windows && msbuild LWVM.sln /p:Configuration=Release /p:Platform=x64
-
-      - name: Create DMG for macOS
-        run: |
-          brew install create-dmg
-          flutter build macos --release
-          create-dmg --volname "LWVM" --window-pos 200 120 --window-size 800 400 --icon-size 100 --app-drag-link --icon "lwvm" 120 190 --hide-extension "lwvm.app" build/macos/x64/Release/lwvm.app
-
+  release:
+    needs: [build-android, build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            build/app/outputs/flutter/apks/app-arm64-release.apk
-            build/linux/x64/release/bundle/lwvm-*-linux-x64.AppImage
-            build/windows/runner/Release/*.msix
-            build/macos/x64/Release/lwvm.dmg
+            artifacts/apk-release/*.apk
+            artifacts/appimage/*.AppImage
+            artifacts/msix/*.msix
+            artifacts/dmg/*.dmg
           token: ${{ secrets.GITHUB_TOKEN }}
