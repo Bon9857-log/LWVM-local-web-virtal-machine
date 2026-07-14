@@ -59,10 +59,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: nttld/action-android-install-ndk@v1
+      - name: Install Android NDK
+        uses: android-actions/setup-ndk@v1
         with:
           ndk-version: '27.0.12097973'
-          add-to-path: true
       - name: Build QEMU for Android
         run: |
           export ANDROID_NDK_HOME=$ANDROID_NDK
