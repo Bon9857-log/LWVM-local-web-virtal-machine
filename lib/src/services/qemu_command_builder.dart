@@ -22,11 +22,19 @@ class QemuCommandBuilder {
     _addMemoryCpuArgs(args, vm);
     _addDiskArgs(args, vm);
     _addAllNetworkArgs(args, vm);
-    _addGraphicsArgs(args, vm);
-    _addGuestAgentArgs(args, vm);
+    _addGraphicsAndGuestAgent(args, vm);
     _addOtherArgs(args);
 
     return args;
+  }
+
+  void _addGraphicsAndGuestAgent(List<String> args, VmInstance vm) {
+    if (vm.config.graphics == GraphicsBackend.spice) {
+      _addSpiceArgs(args);
+    } else {
+      _addVncArgs(args);
+    }
+    _addGuestAgentArgs(args, vm);
   }
 
   void _addAccelerationArgs(List<String> args, VmInstance vm) {
@@ -76,12 +84,25 @@ class QemuCommandBuilder {
   }
 
   void _addAllNetworkArgs(List<String> args, VmInstance vm) {
-    final forwards = vm.config.getAllPortForwards();
+    final customForwards = <int, int>{};
 
-    if (forwards.isEmpty) {
-      args.addAll(['-netdev', 'user,id=net0', '-device', 'virtio-net-pci,netdev=net0']);
-      return;
+    if (vm.config.sshPort != null) {
+      customForwards[22] = int.parse(vm.config.sshPort!);
     }
+    if (vm.config.webPort != null) {
+      customForwards[80] = int.parse(vm.config.webPort!);
+    }
+    if (vm.config.httpsPort != null) {
+      customForwards[443] = int.parse(vm.config.httpsPort!);
+    }
+    if (vm.config.rdpPort != null) {
+      customForwards[3389] = int.parse(vm.config.rdpPort!);
+    }
+    if (vm.config.customPortForwards != null) {
+      customForwards.addAll(vm.config.customPortForwards!);
+    }
+
+    final forwards = {...vm.config.getDefaultPortForwards(), ...customForwards};
 
     final forwardRules = forwards.entries.map((e) => 'hostfwd=tcp:127.0.0.1:${e.value}-:${e.key}').join(',');
 
@@ -93,14 +114,6 @@ class QemuCommandBuilder {
     ]);
   }
 
-  void _addGraphicsArgs(List<String> args, VmInstance vm) {
-    if (vm.config.graphics == GraphicsBackend.spice) {
-      _addSpiceArgs(args);
-    } else {
-      _addVncArgs(args);
-    }
-  }
-
   void _addSpiceArgs(List<String> args) {
     final spicePort = _defaultSpicePort;
     final wsPort = _defaultSpiceWebSocketPort;
@@ -108,9 +121,6 @@ class QemuCommandBuilder {
     args.addAll([
       '-spice',
       'port=$spicePort,addr=127.0.0.1,disable-ticketing=on,image-compression=off,websocket=$wsPort',
-    ]);
-
-    args.addAll([
       '-device',
       'virtio-gpu-pci',
       '-device',
@@ -131,12 +141,13 @@ class QemuCommandBuilder {
   void _addGuestAgentArgs(List<String> args, VmInstance vm) {
     final gaSocketPath = p.join(p.dirname(vm.overlayPath), 'guest-agent.sock');
 
+    if (vm.config.graphics != GraphicsBackend.spice) {
+      args.addAll(['-device', 'virtio-serial-pci']);
+    }
+
     args.addAll([
       '-chardev',
       'socket,id=ga0,path=$gaSocketPath,server=on,wait=off',
-    ]);
-
-    args.addAll([
       '-device',
       'virtserialport,chardev=ga0,name=org.qemu.guest_agent.0',
     ]);
