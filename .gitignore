@@ -1,0 +1,12 @@
+# Packer output
+output-*/
+
+# ORAS archives
+oras_*.tar.gz
+
+# Temporary files
+*.tmp
+*.swp
+
+# QEMU temp files
+/tmp/*
