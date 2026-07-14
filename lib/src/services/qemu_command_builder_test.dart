@@ -1,4 +1,4 @@
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import '../models/platform_capabilities.dart';
 import '../models/vm_config.dart';
 import 'qemu_command_builder.dart';

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/vm_instance.dart';
+import '../../models/vm_config.dart';
 import '../widgets/vm_display.dart';
-import '../widgets/port_forward_editor.dart';
 import '../widgets/shared_folder_picker.dart';
 
 class VmDetailScreen extends ConsumerStatefulWidget {
@@ -54,7 +54,7 @@ class _VmDetailScreenState extends ConsumerState<VmDetailScreen> {
             IconButton(icon: const Icon(Icons.restart_alt), onPressed: _restartVm),
           ],
         ),
-        body: TabBarView(
+body: TabBarView(
           children: [
             VmDisplay(isRunning: isRunning, vmId: _vm.id),
             _buildSettingsTab(isRunning),
@@ -119,7 +119,7 @@ class _VmDetailScreenState extends ConsumerState<VmDetailScreen> {
           Text('No snapshots', style: Theme.of(context).textTheme.bodyMedium),
         for (final snapshot in snapshots)
           ListTile(
-            leading: const Icon(Icons.snapshot),
+            leading: const Icon(Icons.save),
             title: Text(snapshot),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,

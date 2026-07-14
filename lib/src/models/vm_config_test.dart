@@ -1,4 +1,4 @@
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'vm_config.dart';
 
 void main() {
@@ -13,7 +13,7 @@ void main() {
       expect(defaults[3389], equals(3389));
     });
 
-test('getAllPortForwards returns custom port forwards', () {
+    test('getAllPortForwards returns custom port forwards', () {
       const config = VmConfig(sshPort: '3333', customPortForwards: {8080: 8080});
       final forwards = config.getAllPortForwards();
 

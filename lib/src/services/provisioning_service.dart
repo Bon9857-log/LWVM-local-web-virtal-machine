@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:path/path.dart' as p;
+import '../models/platform_capabilities.dart';
 import '../models/vm_config.dart';
 import '../models/vm_instance.dart';
 import '../models/guest_os_image.dart';

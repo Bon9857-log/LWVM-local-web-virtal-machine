@@ -1,5 +1,4 @@
-import 'dart:io';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import '../models/platform_capabilities.dart';
 import '../models/vm_config.dart';

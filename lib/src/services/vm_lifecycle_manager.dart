@@ -69,8 +69,6 @@ class VmLifecycleManager {
         args,
         workingDirectory: p.dirname(vm.overlayPath),
         environment: _buildEnvironment(),
-        stdoutEncoding: utf8,
-        stderrEncoding: utf8,
       );
 
       _runningProcesses[vmId] = process;
@@ -85,11 +83,11 @@ class VmLifecycleManager {
 
   void _setupProcessListeners(String vmId, Process process) {
     process.stdout.listen((data) {
-      _logControllers[vmId]?.add(data);
+      _logControllers[vmId]?.add(utf8.decode(data));
     });
 
     process.stderr.listen((data) {
-      _logControllers[vmId]?.add(data);
+      _logControllers[vmId]?.add(utf8.decode(data));
     });
 
     process.exitCode.then((code) {
