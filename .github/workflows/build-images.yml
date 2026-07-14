@@ -1,0 +1,219 @@
+name: Build Base Images
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'packer/**'
+  workflow_dispatch:
+    inputs:
+      alpine_version:
+        description: 'Alpine version'
+        required: false
+        default: '3.20.0'
+      ubuntu_version:
+        description: 'Ubuntu version'
+        required: false
+        default: '24.04'
+
+env:
+  ALPINE_VERSION: ${{ github.event.inputs.alpine_version || '3.20.0' }}
+  UBUNTU_VERSION: ${{ github.event.inputs.ubuntu_version || '24.04' }}
+
+jobs:
+  build-alpine-amd64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Packer and QEMU
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt-get update && sudo apt-get install -y packer qemu-system-x86 qemu-utils
+
+      - name: Install QEMU plugin
+        run: packer plugin install github.com/hashicorp/qemu
+
+      - name: Build Alpine AMD64
+        run: |
+          cd packer
+          packer init alpine.pkr.hcl
+          packer build \
+            -var='alpine_version=${{ env.ALPINE_VERSION }}' \
+            -var='alpine_arch=amd64' \
+            -var='alpine_iso_url=https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/x86_64/alpine-virt-3.20.0-x86_64.iso' \
+            -var='alpine_iso_checksum=PLACEHOLDER' \
+            -var='qemu_machine_type=q35' \
+            -var='qemu_cpu_type=host' \
+            alpine.pkr.hcl
+
+      - name: Set up ORAS
+        run: |
+          VERSION=$(curl -s https://api.github.com/repos/oras-project/oras/releases/latest | jq -r '.tag_name')
+          curl -LO "https://github.com/oras-project/oras/releases/download/${VERSION}/oras_${VERSION}_linux_amd64.tar.gz"
+          tar -zxvf "oras_${VERSION}_linux_amd64.tar.gz" oras
+          sudo mv oras /usr/local/bin/
+
+      - name: Push to GHCR
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | oras login ghcr.io -u ${{ github.actor }} --password-stdin
+          oras push ghcr.io/${{ github.repository_owner }}/lwvm-images/alpine:${{ env.ALPINE_VERSION }}-amd64 \
+            --annotation org.opencontainers.image.title="LWVM Alpine ${{ env.ALPINE_VERSION }} (AMD64)" \
+            --annotation org.opencontainers.image.description="Alpine ${{ env.ALPINE_VERSION }} minimal VM image for LWVM (AMD64)" \
+            --annotation org.opencontainers.image.type="virtual-machine" \
+            output-alpine-amd64/lwvm-alpine-${{ env.ALPINE_VERSION }}-compressed-amd64.qcow2
+
+  build-alpine-arm64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Packer and QEMU
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt-get update && sudo apt-get install -y packer qemu-system-aarch64 qemu-utils
+
+      - name: Install QEMU plugin
+        run: packer plugin install github.com/hashicorp/qemu
+
+      - name: Build Alpine ARM64
+        run: |
+          cd packer
+          packer init alpine.pkr.hcl
+          packer build \
+            -var='alpine_version=${{ env.ALPINE_VERSION }}' \
+            -var='alpine_arch=arm64' \
+            -var='alpine_iso_url=https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/aarch64/alpine-virt-3.20.0-aarch64.iso' \
+            -var='alpine_iso_checksum=PLACEHOLDER' \
+            -var='qemu_machine_type=virt' \
+            -var='qemu_cpu_type=cortex-a72' \
+            alpine.pkr.hcl
+
+      - name: Set up ORAS
+        run: |
+          VERSION=$(curl -s https://api.github.com/repos/oras-project/oras/releases/latest | jq -r '.tag_name')
+          curl -LO "https://github.com/oras-project/oras/releases/download/${VERSION}/oras_${VERSION}_linux_amd64.tar.gz"
+          tar -zxvf "oras_${VERSION}_linux_amd64.tar.gz" oras
+          sudo mv oras /usr/local/bin/
+
+      - name: Push to GHCR
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | oras login ghcr.io -u ${{ github.actor }} --password-stdin
+          oras push ghcr.io/${{ github.repository_owner }}/lwvm-images/alpine:${{ env.ALPINE_VERSION }}-arm64 \
+            --annotation org.opencontainers.image.title="LWVM Alpine ${{ env.ALPINE_VERSION }} (ARM64)" \
+            --annotation org.opencontainers.image.description="Alpine ${{ env.ALPINE_VERSION }} minimal VM image for LWVM (ARM64)" \
+            --annotation org.opencontainers.image.type="virtual-machine" \
+            output-alpine-arm64/lwvm-alpine-${{ env.ALPINE_VERSION }}-compressed-arm64.qcow2
+
+  build-ubuntu-amd64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Packer and QEMU
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt-get update && sudo apt-get install -y packer qemu-system-x86 qemu-utils
+
+      - name: Install QEMU plugin
+        run: packer plugin install github.com/hashicorp/qemu
+
+      - name: Build Ubuntu AMD64
+        run: |
+          cd packer
+          packer init ubuntu-minimal.pkr.hcl
+          packer build \
+            -var='ubuntu_version=${{ env.UBUNTU_VERSION }}' \
+            -var='ubuntu_arch=amd64' \
+            -var='ubuntu_iso_url=https://releases.ubuntu.com/24.04/ubuntu-24.04-live-server-amd64.iso' \
+            -var='ubuntu_iso_checksum=PLACEHOLDER' \
+            ubuntu-minimal.pkr.hcl
+
+      - name: Set up ORAS
+        run: |
+          VERSION=$(curl -s https://api.github.com/repos/oras-project/oras/releases/latest | jq -r '.tag_name')
+          curl -LO "https://github.com/oras-project/oras/releases/download/${VERSION}/oras_${VERSION}_linux_amd64.tar.gz"
+          tar -zxvf "oras_${VERSION}_linux_amd64.tar.gz" oras
+          sudo mv oras /usr/local/bin/
+
+      - name: Push to GHCR
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | oras login ghcr.io -u ${{ github.actor }} --password-stdin
+          oras push ghcr.io/${{ github.repository_owner }}/lwvm-images/ubuntu:${{ env.UBUNTU_VERSION }}-minimal-amd64 \
+            --annotation org.opencontainers.image.title="LWVM Ubuntu ${{ env.UBUNTU_VERSION }}-minimal (AMD64)" \
+            --annotation org.opencontainers.image.description="Ubuntu ${{ env.UBUNTU_VERSION }} minimal VM image for LWVM (AMD64)" \
+            --annotation org.opencontainers.image.type="virtual-machine" \
+            output-ubuntu-amd64/lwvm-ubuntu-${{ env.UBUNTU_VERSION }}-amd64-minimal-compressed.qcow2
+
+  build-ubuntu-arm64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Packer and QEMU
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt-get update && sudo apt-get install -y packer qemu-system-aarch64 qemu-utils
+
+      - name: Install QEMU plugin
+        run: packer plugin install github.com/hashicorp/qemu
+
+      - name: Build Ubuntu ARM64
+        run: |
+          cd packer
+          packer init ubuntu-minimal.pkr.hcl
+          packer build \
+            -var='ubuntu_version=${{ env.UBUNTU_VERSION }}' \
+            -var='ubuntu_arch=arm64' \
+            -var='ubuntu_iso_url=https://cdimage.ubuntu.com/releases/24.04/release/ubuntu-24.04-live-server-arm64.iso' \
+            -var='ubuntu_iso_checksum=PLACEHOLDER' \
+            -var='qemu_cpu_type=cortex-a72' \
+            ubuntu-minimal.pkr.hcl
+
+      - name: Set up ORAS
+        run: |
+          VERSION=$(curl -s https://api.github.com/repos/oras-project/oras/releases/latest | jq -r '.tag_name')
+          curl -LO "https://github.com/oras-project/oras/releases/download/${VERSION}/oras_${VERSION}_linux_amd64.tar.gz"
+          tar -zxvf "oras_${VERSION}_linux_amd64.tar.gz" oras
+          sudo mv oras /usr/local/bin/
+
+      - name: Push to GHCR
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | oras login ghcr.io -u ${{ github.actor }} --password-stdin
+          oras push ghcr.io/${{ github.repository_owner }}/lwvm-images/ubuntu:${{ env.UBUNTU_VERSION }}-minimal-arm64 \
+            --annotation org.opencontainers.image.title="LWVM Ubuntu ${{ env.UBUNTU_VERSION }}-minimal (ARM64)" \
+            --annotation org.opencontainers.image.description="Ubuntu ${{ env.UBUNTU_VERSION }} minimal VM image for LWVM (ARM64)" \
+            --annotation org.opencontainers.image.type="virtual-machine" \
+            output-ubuntu-arm64/lwvm-ubuntu-${{ env.UBUNTU_VERSION }}-arm64-minimal-compressed.qcow2
+
+  create-manifests:
+    needs: [build-alpine-amd64, build-alpine-arm64, build-ubuntu-amd64, build-ubuntu-arm64]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Alpine manifest list
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | oras login ghcr.io -u ${{ github.actor }} --password-stdin
+          oras manifest create ghcr.io/${{ github.repository_owner }}/lwvm-images/alpine:${{ env.ALPINE_VERSION }}
+          oras manifest annotate ghcr.io/${{ github.repository_owner }}/lwvm-images/alpine:${{ env.ALPINE_VERSION }} \
+            ghcr.io/${{ github.repository_owner }}/lwvm-images/alpine:${{ env.ALPINE_VERSION }}-amd64 --arch amd64
+          oras manifest annotate ghcr.io/${{ github.repository_owner }}/lwvm-images/alpine:${{ env.ALPINE_VERSION }} \
+            ghcr.io/${{ github.repository_owner }}/lwvm-images/alpine:${{ env.ALPINE_VERSION }}-arm64 --arch arm64
+          oras manifest push ghcr.io/${{ github.repository_owner }}/lwvm-images/alpine:${{ env.ALPINE_VERSION }}
+
+      - name: Create Ubuntu manifest list
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | oras login ghcr.io -u ${{ github.actor }} --password-stdin
+          oras manifest create ghcr.io/${{ github.repository_owner }}/lwvm-images/ubuntu:${{ env.UBUNTU_VERSION }}-minimal
+          oras manifest annotate ghcr.io/${{ github.repository_owner }}/lwvm-images/ubuntu:${{ env.UBUNTU_VERSION }}-minimal \
+            ghcr.io/${{ github.repository_owner }}/lwvm-images/ubuntu:${{ env.UBUNTU_VERSION }}-minimal-amd64 --arch amd64
+          oras manifest annotate ghcr.io/${{ github.repository_owner }}/lwvm-images/ubuntu:${{ env.UBUNTU_VERSION }}-minimal \
+            ghcr.io/${{ github.repository_owner }}/lwvm-images/ubuntu:${{ env.UBUNTU_VERSION }}-minimal-arm64 --arch arm64
+          oras manifest push ghcr.io/${{ github.repository_owner }}/lwvm-images/ubuntu:${{ env.UBUNTU_VERSION }}-minimal
