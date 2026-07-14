@@ -13,12 +13,22 @@ void main() {
       expect(defaults[3389], equals(3389));
     });
 
-    test('getAllPortForwards returns custom port forwards', () {
+test('getAllPortForwards returns custom port forwards', () {
       const config = VmConfig(sshPort: '3333', customPortForwards: {8080: 8080});
       final forwards = config.getAllPortForwards();
 
       expect(forwards[22], equals(3333));
       expect(forwards[8080], equals(8080));
+    });
+
+    test('sharedFolderBackend defaults to webdav', () {
+      const config = VmConfig();
+      expect(config.sharedFolderBackend, equals(SharedFolderBackend.webdav));
+    });
+
+    test('sharedFolderBackend can be configured to virtiofs', () {
+      const config = VmConfig(sharedFolderBackend: SharedFolderBackend.virtiofs);
+      expect(config.sharedFolderBackend, equals(SharedFolderBackend.virtiofs));
     });
   });
 }

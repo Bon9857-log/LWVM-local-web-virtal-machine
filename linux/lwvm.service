@@ -1,0 +1,15 @@
+[Unit]
+Description=LWVM VM Manager
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/lwvm
+Restart=on-failure
+RestartSec=5s
+Environment=DISPLAY=:0
+Environment=XDG_RUNTIME_DIR=%t
+
+[Install]
+WantedBy=graphical-session.target

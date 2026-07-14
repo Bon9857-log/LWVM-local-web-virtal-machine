@@ -30,11 +30,12 @@ class QemuCommandBuilder {
 
   void _addGraphicsAndGuestAgent(List<String> args, VmInstance vm) {
     if (vm.config.graphics == GraphicsBackend.spice) {
-      _addSpiceArgs(args);
+      _addSpiceArgs(args, vm);
     } else {
       _addVncArgs(args);
     }
     _addGuestAgentArgs(args, vm);
+    _addSharedFolderArgs(args, vm);
   }
 
   void _addAccelerationArgs(List<String> args, VmInstance vm) {
@@ -65,8 +66,22 @@ class QemuCommandBuilder {
       ram = ram.clamp(512, ram > _defaultChromeOSRamLimitMb ? ram : _defaultChromeOSRamLimitMb);
     }
 
-    args.addAll(['-m', '${ram}M']);
+    if (capabilities.hasKvm && capabilities.hasHugePages) {
+      _addHugePageMemoryArgs(args, ram);
+    } else {
+      args.addAll(['-m', '${ram}M']);
+    }
     args.addAll(['-smp', '$cpus']);
+  }
+
+  void _addHugePageMemoryArgs(List<String> args, int ram) {
+    final sizeGb = (ram * 1024 * 1024) ~/ (1024 * 1024 * 1024) + 1;
+    args.addAll([
+      '-object',
+      'memory-backend-file,id=mem,size=${sizeGb}G,mem-path=/dev/hugepages,share=on,prealloc=on',
+      '-numa',
+      'node,memdev=mem',
+    ]);
   }
 
   void _addDiskArgs(List<String> args, VmInstance vm) {
@@ -114,15 +129,19 @@ class QemuCommandBuilder {
     ]);
   }
 
-  void _addSpiceArgs(List<String> args) {
+  void _addSpiceArgs(List<String> args, VmInstance vm) {
     final spicePort = _defaultSpicePort;
     final wsPort = _defaultSpiceWebSocketPort;
+
+    final gpuDevice = (capabilities.hasVirgl)
+        ? 'virtio-gpu-pci,virgl=on'
+        : 'virtio-gpu-pci';
 
     args.addAll([
       '-spice',
       'port=$spicePort,addr=127.0.0.1,disable-ticketing=on,image-compression=off,websocket=$wsPort',
       '-device',
-      'virtio-gpu-pci',
+      gpuDevice,
       '-device',
       'virtio-serial-pci',
       '-chardev',
@@ -151,6 +170,23 @@ class QemuCommandBuilder {
       '-device',
       'virtserialport,chardev=ga0,name=org.qemu.guest_agent.0',
     ]);
+  }
+
+  void _addSharedFolderArgs(List<String> args, VmInstance vm) {
+    if (!capabilities.hasKvm || !capabilities.virtiofsSupported) return;
+
+    final sharedPath = vm.config.sharedFolderPath;
+
+    if (sharedPath == null || sharedPath.isEmpty) return;
+
+    if (vm.config.sharedFolderBackend == SharedFolderBackend.virtiofs) {
+      args.addAll([
+        '-fsdev',
+        'local,id=fsdev0,path=$sharedPath,security_model=mapped-xattr,readonly=off',
+        '-device',
+        'virtio-fs-pci,fsdev=fsdev0,mount_tag=host_shared,queue-size=1024',
+      ]);
+    }
   }
 
   void _addOtherArgs(List<String> args) {

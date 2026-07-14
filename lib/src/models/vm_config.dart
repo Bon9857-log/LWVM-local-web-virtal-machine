@@ -7,6 +7,8 @@ enum GuestOS { alpine, ubuntu, zorin }
 
 enum GraphicsBackend { spice, vnc }
 
+enum SharedFolderBackend { webdav, virtiofs }
+
 @freezed
 class VmConfig with _$VmConfig {
   const factory VmConfig({
@@ -15,11 +17,14 @@ class VmConfig with _$VmConfig {
     @Default(20) int diskSize,
     @Default(GuestOS.alpine) GuestOS guestOS,
     @Default(GraphicsBackend.spice) GraphicsBackend graphics,
+    @Default(SharedFolderBackend.webdav) SharedFolderBackend sharedFolderBackend,
     String? sshPort,
     String? webPort,
     String? httpsPort,
     String? rdpPort,
     Map<int, int>? customPortForwards,
+    String? sharedFolderPath,
+    String? sharedFolderMountPoint,
   }) = _VmConfig;
 
   factory VmConfig.fromJson(Map<String, dynamic> json) => _$VmConfigFromJson(json);

@@ -12,6 +12,9 @@ class PlatformCapabilities with _$PlatformCapabilities {
     required bool isChromeOS,
     required String nativeArch,
     @Default(false) bool hasTCG,
+    @Default(false) bool hasHugePages,
+    @Default(false) bool hasVirgl,
+    @Default(false) bool virtiofsSupported,
   }) = _PlatformCapabilities;
 
   factory PlatformCapabilities.fromJson(Map<String, dynamic> json) =>

@@ -33,12 +33,26 @@ class _CreateVmWizardState extends State<CreateVmWizard> {
     });
   }
 
+  SharedFolder _buildSharedFolderConfig() {
+    return SharedFolder(
+      hostPath: _sharedFolders.isNotEmpty ? _sharedFolders.first.hostPath : '',
+      guestPath: _sharedFolders.isNotEmpty ? _sharedFolders.first.guestPath : '/mnt/host',
+      readOnly: _sharedFolders.isNotEmpty ? _sharedFolders.first.readOnly : false,
+    );
+  }
+
   VmConfig _buildConfig() {
+    final sharedFolder = _buildSharedFolderConfig();
     return VmConfig(
       cpus: _cpus,
       ram: _ram,
       diskSize: _diskSize,
       guestOS: _selectedOs,
+      sharedFolderBackend: sharedFolder.hostPath.isNotEmpty 
+          ? SharedFolderBackend.virtiofs 
+          : SharedFolderBackend.webdav,
+      sharedFolderPath: sharedFolder.hostPath,
+      sharedFolderMountPoint: sharedFolder.guestPath,
       sshPort: _portForwards[22]?.toString(),
       webPort: _portForwards[80]?.toString(),
       httpsPort: _portForwards[443]?.toString(),

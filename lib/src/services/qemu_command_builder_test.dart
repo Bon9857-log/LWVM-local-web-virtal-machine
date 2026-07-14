@@ -16,6 +16,9 @@ void main() {
           isChromeOS: true,
           nativeArch: 'arm64',
           hasTCG: true,
+          hasHugePages: false,
+          hasVirgl: false,
+          virtiofsSupported: false,
         );
         builder = QemuCommandBuilder(caps);
       });
@@ -89,6 +92,9 @@ void main() {
           isChromeOS: false,
           nativeArch: 'x86_64',
           hasTCG: true,
+          hasHugePages: false,
+          hasVirgl: false,
+          virtiofsSupported: false,
         );
         builder = QemuCommandBuilder(caps);
       });
@@ -113,6 +119,92 @@ void main() {
       });
     });
 
+    group('Linux with KVM and HugePages', () {
+      setUp(() {
+        final caps = const PlatformCapabilities(
+          hasKvm: true,
+          hasHyperV: false,
+          hasVirtFramework: false,
+          isChromeOS: false,
+          nativeArch: 'x86_64',
+          hasTCG: true,
+          hasHugePages: true,
+          hasVirgl: false,
+          virtiofsSupported: false,
+        );
+        builder = QemuCommandBuilder(caps);
+      });
+
+      test('uses hugepages memory backend', () {
+        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
+
+        final args = builder.build(vm);
+
+        expect(args.any((a) => a.contains('memory-backend-file')), true);
+        expect(args.any((a) => a.contains('mem-path=/dev/hugepages')), true);
+        expect(args.any((a) => a.contains('prealloc=on')), true);
+      });
+    });
+
+    group('Linux with KVM and VirGL', () {
+      setUp(() {
+        final caps = const PlatformCapabilities(
+          hasKvm: true,
+          hasHyperV: false,
+          hasVirtFramework: false,
+          isChromeOS: false,
+          nativeArch: 'x86_64',
+          hasTCG: true,
+          hasHugePages: false,
+          hasVirgl: true,
+          virtiofsSupported: false,
+        );
+        builder = QemuCommandBuilder(caps);
+      });
+
+      test('enables virgl on virtio-gpu-pci', () {
+        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
+
+        final args = builder.build(vm);
+
+        expect(args.any((a) => a.contains('virtio-gpu-pci,virgl=on')), true);
+      });
+    });
+
+    group('Linux with VirtIO-FS', () {
+      setUp(() {
+        final caps = const PlatformCapabilities(
+          hasKvm: true,
+          hasHyperV: false,
+          hasVirtFramework: false,
+          isChromeOS: false,
+          nativeArch: 'x86_64',
+          hasTCG: true,
+          hasHugePages: false,
+          hasVirgl: false,
+          virtiofsSupported: true,
+        );
+        builder = QemuCommandBuilder(caps);
+      });
+
+      test('includes virtio-fs-pci when shared folder configured', () {
+        final vm = _createTestVm(
+          'test-vm',
+          '/vms/test-vm/overlay.qcow2',
+          config: const VmConfig(
+            sharedFolderPath: '/home/user/shared',
+            sharedFolderMountPoint: '/mnt/host',
+            sharedFolderBackend: SharedFolderBackend.virtiofs,
+          ),
+        );
+
+        final args = builder.build(vm);
+
+        expect(args.any((a) => a.contains('virtio-fs-pci')), true);
+        expect(args.any((a) => a.contains('queue-size=1024')), true);
+      });
+    });
+
     group('Windows with Hyper-V', () {
       setUp(() {
         final caps = const PlatformCapabilities(
@@ -122,6 +214,9 @@ void main() {
           isChromeOS: false,
           nativeArch: 'x86_64',
           hasTCG: true,
+          hasHugePages: false,
+          hasVirgl: false,
+          virtiofsSupported: false,
         );
         builder = QemuCommandBuilder(caps);
       });
@@ -145,6 +240,9 @@ void main() {
           isChromeOS: true,
           nativeArch: 'arm64',
           hasTCG: true,
+          hasHugePages: false,
+          hasVirgl: false,
+          virtiofsSupported: false,
         );
         builder = QemuCommandBuilder(caps);
       });

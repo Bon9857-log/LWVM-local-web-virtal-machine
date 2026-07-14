@@ -1,0 +1,50 @@
+app-id: com.example.LWVM
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+command: lwvm
+finish-args:
+  - --share=network
+  - --socket=x11
+  - --socket=wayland
+  - --socket=desktop
+  - --socket=desktop-legacy
+  - --device=all
+  - --filesystem=host
+  - --filesystem=home
+  - --talk-name=org.freedesktop.Flatpak
+  - --own-name=com.example.LWVM
+  - --talk-name=org.freedesktop.portal.FileChooser
+  - --talk-name=org.freedesktop.portal.Settings
+modules:
+  - name: lwvm
+    buildsystem: simple
+    build-commands:
+      - flutter pub get
+      - flutter build linux --release
+      - install -D build/linux/x64/release/bundle/lwvm /app/bin/lwvm
+      - install -D assets/icon.png /app/share/icons/hicolor/256x256/apps/com.example.LWVM.png
+    sources:
+      - type: dir
+        path: ..
+      - type: archive
+        url: https://github.com/qemu/qemu/releases/download/v9.0.0/qemu-system-x86_64-static
+        dest-filename: qemu-system-x86_64
+      - type: file
+        path: lwvm.desktop
+        dest-filename: com.example.LWVM.desktop
+  - name: qemu-bundled
+    buildsystem: simple
+    build-commands:
+      - install -D qemu-system-x86_64 /app/bin/qemu-system-x86_64
+    sources:
+      - type: file
+        url: https://github.com/qemu/qemu/releases/download/v9.0.0/qemu-system-x86_64-static
+        dest-filename: qemu-system-x86_64
+  - name: spice-client-gtk
+    buildsystem: meson
+    sources:
+      - type: archive
+        url: https://github.com/freedesktop/spice-gtk/releases/download/v0.44/spice-gtk-0.44.tar.xz
+    build-options:
+      prepend-path: /app/bin

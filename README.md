@@ -8,6 +8,52 @@ ChromeOS-first VM platform built with Flutter.
 - Android support for ChromeOS ARCVM
 - QEMU binaries for all platforms
 
+## Linux KVM Optimizations
+
+LWVM automatically detects and enables KVM optimizations on Linux:
+
+### KVM Detection
+
+The app checks `/dev/kvm` for read/write permissions and falls back to TCG if unavailable.
+
+### HugePages
+
+When hugepages are configured (`/proc/meminfo` shows `HugePages_Total > 0`), LWVM uses:
+```bash
+-object memory-backend-file,id=mem,size=4G,mem-path=/dev/hugepages,share=on,prealloc=on
+-numa node,memdev=mem
+```
+
+### VirGL 3D Acceleration
+
+Detects `libvirglrenderer.so` via `ldconfig -p` and enables:
+```bash
+-device virtio-gpu-pci,virgl=on
+```
+
+### VirtIO-FS Shared Folders
+
+On kernel 5.4+, detects support and enables VirtIO-FS for host-guest file sharing:
+```bash
+-fsdev local,id=fsdev0,path=/host/path,security_model=mapped-xattr
+-device virtio-fs-pci,fsdev=fsdev0,mount_tag=host_shared,queue-size=1024
+```
+
+### Installation Requirements
+
+Enable KVM and HugPages on Linux:
+```bash
+# Add user to kvm group
+sudo usermod -a -G kvm $USER
+
+# Setup hugepages (example for 4GB)
+echo 2048 | sudo tee /proc/sys/vm/nr_hugepages
+echo mount -t hugetlbfs none /dev/hugepages >> /etc/fstab
+
+# Install virgl for 3D acceleration
+sudo apt install libvirglrenderer0
+```
+
 ## Building
 
 ### Prerequisites
