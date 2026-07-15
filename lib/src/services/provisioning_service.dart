@@ -23,7 +23,7 @@ class ProvisioningService {
 
     await Directory(vmDir).create(recursive: true);
 
-    await _createOverlayDisk(overlayPath);
+    await _createOverlayDisk(overlayPath, config.guestOS);
 
     await _createDataDisk(dataDiskPath, config.diskSize);
 
@@ -35,8 +35,8 @@ class ProvisioningService {
     );
   }
 
-  Future<void> _createOverlayDisk(String path) async {
-    final baseImagePath = await _getBaseImagePath();
+  Future<void> _createOverlayDisk(String path, GuestOS os) async {
+    final baseImagePath = await _getBaseImagePath(os);
     
     final args = ['create', '-f', 'qcow2', '-b', baseImagePath, path];
     final qemuPath = await binaryResolver.resolveBinaryPath('qemu-img');
@@ -53,7 +53,7 @@ class ProvisioningService {
     }
   }
 
-  Future<String> _getBaseImagePath() async {
+  Future<String> _getBaseImagePath(GuestOS os) async {
     final cacheDir = await _getImageCacheDir();
     final images = {
       GuestOS.alpine: 'alpine.qcow2',
@@ -61,7 +61,7 @@ class ProvisioningService {
       GuestOS.zorin: 'zorin.qcow2',
     };
     
-    final imageName = images[GuestOS.alpine]!;
+    final imageName = images[os]!;
     return p.join(cacheDir, imageName);
   }
 
