@@ -15,10 +15,15 @@ on:
         description: 'Ubuntu version'
         required: false
         default: '24.04'
+      zorin_version:
+        description: 'Zorin OS version'
+        required: false
+        default: '17'
 
 env:
   ALPINE_VERSION: ${{ github.event.inputs.alpine_version || '3.20.0' }}
   UBUNTU_VERSION: ${{ github.event.inputs.ubuntu_version || '24.04' }}
+  ZORIN_VERSION: ${{ github.event.inputs.zorin_version || '17' }}
 
 jobs:
   build-alpine-amd64:
@@ -540,8 +545,107 @@ jobs:
             --annotation org.opencontainers.image.type="virtual-machine" \
             output-ubuntu-datasci-arm64/lwvm-ubuntu-datasci-${{ env.UBUNTU_VERSION }}-compressed-arm64.qcow2
 
+  build-zorin-amd64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Packer and QEMU
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt-get update && sudo apt-get install -y packer qemu-system-x86 qemu-utils wget
+
+      - name: Install QEMU plugin
+        run: packer plugin install github.com/hashicorp/qemu
+
+      - name: Get Zorin ISO checksum
+        run: |
+          wget -q https://mirrors.edge.kernel.org/zorinos-isos/17/SHA256SUMS.txt -O /tmp/zorin-checksums.txt
+          CHECKSUM=$(grep -m1 'Zorin-OS-17.1-Core-64-bit.iso' /tmp/zorin-checksums.txt | awk '{print $1}')
+          echo "ZORIN_ISO_CHECKSUM=$CHECKSUM" >> $GITHUB_ENV
+
+      - name: Build Zorin OS AMD64
+        run: |
+          cd packer
+          packer init zorin.pkr.hcl
+          packer build \
+            -var='zorin_version=${{ env.ZORIN_VERSION }}' \
+            -var='zorin_arch=amd64' \
+            -var='zorin_iso_url=https://mirrors.edge.kernel.org/zorinos-isos/17/Zorin-OS-17.1-Core-64-bit.iso' \
+            -var='zorin_iso_checksum=${{ env.ZORIN_ISO_CHECKSUM }}' \
+            -var='qemu_cpu_type=host' \
+            zorin.pkr.hcl
+
+      - name: Set up ORAS
+        run: |
+          VERSION=$(curl -s https://api.github.com/repos/oras-project/oras/releases/latest | jq -r '.tag_name')
+          curl -LO "https://github.com/oras-project/oras/releases/download/${VERSION}/oras_${VERSION}_linux_amd64.tar.gz"
+          tar -zxvf "oras_${VERSION}_linux_amd64.tar.gz" oras
+          sudo mv oras /usr/local/bin/
+
+      - name: Push to GHCR
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | oras login ghcr.io -u ${{ github.actor }} --password-stdin
+          oras push ghcr.io/${{ github.repository_owner }}/lwvm-images/zorin-os:${{ env.ZORIN_VERSION }}-amd64 \
+            --annotation org.opencontainers.image.title="LWVM Zorin OS ${{ env.ZORIN_VERSION }} (AMD64)" \
+            --annotation org.opencontainers.image.description="Zorin OS ${{ env.ZORIN_VERSION }} desktop VM image for LWVM (AMD64)" \
+            --annotation org.opencontainers.image.type="virtual-machine" \
+            output-zorin-amd64/lwvm-zorin-${{ env.ZORIN_VERSION }}-compressed-amd64.qcow2
+
+  build-zorin-arm64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 420
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Packer and QEMU
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt-get update && sudo apt-get install -y packer qemu-system-aarch64 qemu-utils wget
+
+      - name: Install QEMU plugin
+        run: packer plugin install github.com/hashicorp/qemu
+
+      - name: Get Ubuntu Desktop ARM64 ISO checksum
+        run: |
+          wget -q https://cdimage.ubuntu.com/releases/24.04/release/SHA256SUMS -O /tmp/ubuntu-arm64-checksums.txt
+          CHECKSUM=$(grep -m1 'ubuntu-24.04.4-desktop-arm64.iso' /tmp/ubuntu-arm64-checksums.txt | awk '{print $1}')
+          echo "UBUNTU_ARM64_CHECKSUM=$CHECKSUM" >> $GITHUB_ENV
+
+      - name: Build Zorin OS ARM64
+        run: |
+          cd packer
+          packer init zorin.pkr.hcl
+          packer build \
+            -var='zorin_version=${{ env.ZORIN_VERSION }}' \
+            -var='zorin_arch=arm64' \
+            -var='zorin_iso_url=https://cdimage.ubuntu.com/releases/24.04/release/ubuntu-24.04.4-desktop-arm64.iso' \
+            -var='zorin_iso_checksum=${{ env.UBUNTU_ARM64_CHECKSUM }}' \
+            -var='qemu_cpu_type=cortex-a72' \
+            -var='build_arm64=true' \
+            zorin.pkr.hcl
+
+      - name: Set up ORAS
+        run: |
+          VERSION=$(curl -s https://api.github.com/repos/oras-project/oras/releases/latest | jq -r '.tag_name')
+          curl -LO "https://github.com/oras-project/oras/releases/download/${VERSION}/oras_${VERSION}_linux_amd64.tar.gz"
+          tar -zxvf "oras_${VERSION}_linux_amd64.tar.gz" oras
+          sudo mv oras /usr/local/bin/
+
+      - name: Push to GHCR
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | oras login ghcr.io -u ${{ github.actor }} --password-stdin
+          oras push ghcr.io/${{ github.repository_owner }}/lwvm-images/zorin-os:${{ env.ZORIN_VERSION }}-arm64 \
+            --annotation org.opencontainers.image.title="LWVM Zorin OS ${{ env.ZORIN_VERSION }} (ARM64)" \
+            --annotation org.opencontainers.image.description="Zorin OS ${{ env.ZORIN_VERSION }} desktop VM image for LWVM (ARM64) - Built on Ubuntu ARM64 with Zorin packages" \
+            --annotation org.opencontainers.image.type="virtual-machine" \
+            output-zorin-arm64/lwvm-zorin-${{ env.ZORIN_VERSION }}-compressed-arm64.qcow2
+
   create-manifests:
-    needs: [build-alpine-amd64, build-alpine-arm64, build-alpine-dev-amd64, build-alpine-dev-arm64, build-minimal-linux-amd64, build-minimal-linux-arm64, build-ubuntu-amd64, build-ubuntu-arm64, build-ubuntu-webdev-amd64, build-ubuntu-webdev-arm64, build-ubuntu-datasci-amd64, build-ubuntu-datasci-arm64]
+    needs: [build-alpine-amd64, build-alpine-arm64, build-alpine-dev-amd64, build-alpine-dev-arm64, build-minimal-linux-amd64, build-minimal-linux-arm64, build-ubuntu-amd64, build-ubuntu-arm64, build-ubuntu-webdev-amd64, build-ubuntu-webdev-arm64, build-ubuntu-datasci-amd64, build-ubuntu-datasci-arm64, build-zorin-amd64, build-zorin-arm64]
     runs-on: ubuntu-latest
     steps:
       - name: Create Alpine manifest
@@ -603,3 +707,13 @@ jobs:
           oras manifest annotate ghcr.io/${{ github.repository_owner }}/lwvm-images/ubuntu-datasci:${{ env.UBUNTU_VERSION }} \
             ghcr.io/${{ github.repository_owner }}/lwvm-images/ubuntu-datasci:${{ env.UBUNTU_VERSION }}-arm64 --arch arm64
           oras manifest push ghcr.io/${{ github.repository_owner }}/lwvm-images/ubuntu-datasci:${{ env.UBUNTU_VERSION }}
+
+      - name: Create Zorin OS manifest
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | oras login ghcr.io -u ${{ github.actor }} --password-stdin
+          oras manifest create ghcr.io/${{ github.repository_owner }}/lwvm-images/zorin-os:${{ env.ZORIN_VERSION }}
+          oras manifest annotate ghcr.io/${{ github.repository_owner }}/lwvm-images/zorin-os:${{ env.ZORIN_VERSION }} \
+            ghcr.io/${{ github.repository_owner }}/lwvm-images/zorin-os:${{ env.ZORIN_VERSION }}-amd64 --arch amd64
+          oras manifest annotate ghcr.io/${{ github.repository_owner }}/lwvm-images/zorin-os:${{ env.ZORIN_VERSION }} \
+            ghcr.io/${{ github.repository_owner }}/lwvm-images/zorin-os:${{ env.ZORIN_VERSION }}-arm64 --arch arm64
+          oras manifest push ghcr.io/${{ github.repository_owner }}/lwvm-images/zorin-os:${{ env.ZORIN_VERSION }}

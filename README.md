@@ -66,3 +66,26 @@ GitHub Actions builds on all platforms:
 - macOS: DMG
 - Windows: MSIX
 - Android: APK (arm64, x86_64)
+
+### Base Images
+
+Pre-built VM images are available on GitHub Container Registry:
+
+| Image | Description | Size |
+|-------|-------------|------|
+| `alpine:3.20` | Minimal Alpine Linux | ~500MB |
+| `alpine-dev:3.20` | Alpine with dev tools (git, vim, python, node, go, docker-cli) | ~500MB |
+| `minimal-linux:3.20` | Minimal Linux with BusyBox + SSH | ~100MB |
+| `ubuntu:24.04-minimal` | Ubuntu Server 24.04 | ~3GB |
+| `ubuntu-webdev:24.04` | Ubuntu with Docker, VSCode, Node, Python | ~3GB |
+| `ubuntu-datasci:24.04` | Ubuntu with Jupyter, PyTorch, Pandas | ~4GB |
+| `zorin-os:17` | **Premium Desktop** - Polished Zorin OS 17 desktop experience | ~2.5GB (amd64), ~3GB (arm64) |
+
+Pull images with:
+```bash
+# Login to GHCR
+echo $GITHUB_TOKEN | oras login ghcr.io -u $USERNAME --password-stdin
+
+# Pull specific architecture
+oras pull ghcr.io/<owner>/lwvm-images/zorin-os:17-amd64
+```

@@ -169,14 +169,14 @@ FilledButton(
           subtitle: const Text('Standard (~3GB)'),
           secondary: const Icon(Icons.radio_button_checked),
         ),
-        RadioListTile<GuestOS>(
-          value: GuestOS.zorin,
-          groupValue: _selectedOs,
-          onChanged: (v) => setState(() => _selectedOs = v!),
-          title: const Text('Zorin OS 17'),
-          subtitle: const Text('Desktop (~2.5GB)'),
-          secondary: const Icon(Icons.radio_button_checked),
-        ),
+RadioListTile<GuestOS>(
+           value: GuestOS.zorin,
+           groupValue: _selectedOs,
+           onChanged: (v) => setState(() => _selectedOs = v!),
+           title: const Text('Zorin OS 17'),
+           subtitle: const Text('Premium Desktop (~2.5GB)'),
+           secondary: const Icon(Icons.radio_button_checked),
+         ),
       ],
     );
   }
