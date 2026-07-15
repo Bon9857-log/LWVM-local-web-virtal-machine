@@ -51,7 +51,7 @@ class _CreateVmWizardState extends State<CreateVmWizard> {
       sharedFolderBackend: sharedFolder.hostPath.isNotEmpty 
           ? SharedFolderBackend.virtiofs 
           : SharedFolderBackend.webdav,
-      sharedFolderPath: sharedFolder.hostPath,
+sharedFolderPath: sharedFolder.hostPath,
       sharedFolderMountPoint: sharedFolder.guestPath,
       sshPort: _portForwards[22]?.toString(),
       webPort: _portForwards[80]?.toString(),
@@ -59,7 +59,7 @@ class _CreateVmWizardState extends State<CreateVmWizard> {
       customPortForwards: {
         for (final entry in _portForwards.entries)
           if (![22, 80, 443, 3389].contains(entry.key)) entry.key: entry.value,
-      }..removeWhere((key, value) => key == null || value == null),
+      },
     );
   }
 
@@ -120,10 +120,15 @@ class _CreateVmWizardState extends State<CreateVmWizard> {
                   },
                 ),
                 const SizedBox(height: 16),
-                SharedFolderPicker(
-                  initialFolders: _sharedFolders,
-                  onChanged: (folders) => setState(() => _sharedFolders.clear()..addAll(folders)),
-                ),
+SharedFolderPicker(
+                   initialFolders: _sharedFolders,
+                   onChanged: (folders) {
+                     setState(() {
+                       _sharedFolders.clear();
+                       _sharedFolders.addAll(folders);
+                     });
+                   },
+                 ),
               ],
             ),
             isActive: _currentStep >= 2,

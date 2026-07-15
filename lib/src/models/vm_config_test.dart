@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'vm_config.dart';
 
 void main() {
-  group('VmConfigExtension', () {
+  group('VmConfig', () {
     test('getDefaultPortForwards returns default mappings', () {
       const config = VmConfig();
       final defaults = config.getDefaultPortForwards();

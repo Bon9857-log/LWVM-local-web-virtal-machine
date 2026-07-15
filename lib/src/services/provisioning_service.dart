@@ -36,9 +36,8 @@ class ProvisioningService {
   }
 
   Future<void> _createOverlayDisk(String path) async {
-    final cmd = Platform.isWindows ? 'qemu-img.exe' : 'qemu-img';
     final args = ['create', '-f', 'qcow2', '-b', await _getBaseImagePath(), path];
-    
+
     final qemuPath = await binaryResolver.resolveBinaryPath('qemu-img');
     if (qemuPath != null) {
       await Process.run(qemuPath, args);

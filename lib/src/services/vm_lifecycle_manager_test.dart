@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:path/path.dart' as p;
 import '../models/platform_capabilities.dart';
 import '../models/vm_config.dart';
 import '../models/vm_instance.dart';
@@ -44,26 +43,12 @@ void main() {
   });
 }
 
-dynamic _createTestVm(String id, String overlayPath, {VmConfig? config}) {
+VmInstance _createTestVm(String id, String overlayPath, {VmConfig? config}) {
   final configObj = config ?? VmConfig();
-  return _VmInstance(
+  return VmInstance(
     id: id,
     config: configObj,
     overlayPath: overlayPath,
     dataDiskPath: '$overlayPath-data',
   );
-}
-
-class _VmInstance {
-  final String id;
-  final VmConfig config;
-  final String overlayPath;
-  final String dataDiskPath;
-
-  _VmInstance({
-    required this.id,
-    required this.config,
-    required this.overlayPath,
-    required this.dataDiskPath,
-  });
 }

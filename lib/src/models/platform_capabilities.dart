@@ -1,22 +1,37 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
+class PlatformCapabilities {
+  final bool hasKvm;
+  final bool hasHyperV;
+  final bool hasVirtFramework;
+  final bool isChromeOS;
+  final String nativeArch;
+  final bool hasTCG;
+  final bool hasHugePages;
+  final bool hasVirgl;
+  final bool virtiofsSupported;
 
-part 'platform_capabilities.freezed.dart';
-part 'platform_capabilities.g.dart';
+  const PlatformCapabilities({
+    required this.hasKvm,
+    required this.hasHyperV,
+    required this.hasVirtFramework,
+    required this.isChromeOS,
+    required this.nativeArch,
+    this.hasTCG = false,
+    this.hasHugePages = false,
+    this.hasVirgl = false,
+    this.virtiofsSupported = false,
+  });
 
-@freezed
-class PlatformCapabilities with _$PlatformCapabilities {
-  const factory PlatformCapabilities({
-    required bool hasKvm,
-    required bool hasHyperV,
-    required bool hasVirtFramework,
-    required bool isChromeOS,
-    required String nativeArch,
-    @Default(false) bool hasTCG,
-    @Default(false) bool hasHugePages,
-    @Default(false) bool hasVirgl,
-    @Default(false) bool virtiofsSupported,
-  }) = _PlatformCapabilities;
-
-  factory PlatformCapabilities.fromJson(Map<String, dynamic> json) =>
-      _$PlatformCapabilitiesFromJson(json);
+  factory PlatformCapabilities.fromJson(Map<String, dynamic> json) {
+    return PlatformCapabilities(
+      hasKvm: json['hasKvm'] as bool? ?? false,
+      hasHyperV: json['hasHyperV'] as bool? ?? false,
+      hasVirtFramework: json['hasVirtFramework'] as bool? ?? false,
+      isChromeOS: json['isChromeOS'] as bool? ?? false,
+      nativeArch: json['nativeArch'] as String? ?? 'unknown',
+      hasTCG: json['hasTCG'] as bool? ?? false,
+      hasHugePages: json['hasHugePages'] as bool? ?? false,
+      hasVirgl: json['hasVirgl'] as bool? ?? false,
+      virtiofsSupported: json['virtiofsSupported'] as bool? ?? false,
+    );
+  }
 }

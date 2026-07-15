@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'src/providers/providers.dart';
 import 'src/ui/screens/screens.dart';
 
 void main() {

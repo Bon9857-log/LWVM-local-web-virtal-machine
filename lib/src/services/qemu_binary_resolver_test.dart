@@ -64,7 +64,7 @@ void main() {
 
       final resolver = QemuBinaryResolver(caps);
       // Path won't exist in test environment but logic is tested
-      final path = await resolver.resolveBinaryPath('/custom/qemu');
+      await resolver.resolveBinaryPath('/custom/qemu');
       
       // Explicit path logic tested in other contexts
       expect(resolver, isNotNull);
