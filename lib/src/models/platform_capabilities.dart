@@ -34,4 +34,18 @@ class PlatformCapabilities {
       virtiofsSupported: json['virtiofsSupported'] as bool? ?? false,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'hasKvm': hasKvm,
+      'hasHyperV': hasHyperV,
+      'hasVirtFramework': hasVirtFramework,
+      'isChromeOS': isChromeOS,
+      'nativeArch': nativeArch,
+      'hasTCG': hasTCG,
+      'hasHugePages': hasHugePages,
+      'hasVirgl': hasVirgl,
+      'virtiofsSupported': virtiofsSupported,
+    };
+  }
 }

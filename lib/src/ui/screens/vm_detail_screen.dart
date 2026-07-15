@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/vm_instance.dart';
-import '../../models/vm_config.dart';
 import '../widgets/vm_display.dart';
 import '../widgets/shared_folder_picker.dart';
 

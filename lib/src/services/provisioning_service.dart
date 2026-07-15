@@ -17,7 +17,7 @@ class ProvisioningService {
 
   Future<VmInstance> createVm(VmConfig config, {String? vmId}) async {
     final id = vmId ?? 'vm-${DateTime.now().millisecondsSinceEpoch}';
-    final vmDir = _vmDirectory(id);
+    final vmDir = await _vmDirectory(id);
     final overlayPath = p.join(vmDir, 'overlay.qcow2');
     final dataDiskPath = p.join(vmDir, 'data.qcow2');
 
@@ -36,7 +36,8 @@ class ProvisioningService {
   }
 
   Future<void> _createOverlayDisk(String path) async {
-    final args = ['create', '-f', 'qcow2', '-b', await _getBaseImagePath(), path];
+    final baseImagePath = await _getBaseImagePath();
+    final args = ['create', '-f', 'qcow2', '-b', baseImagePath, path];
 
     final qemuPath = await binaryResolver.resolveBinaryPath('qemu-img');
     if (qemuPath != null) {
