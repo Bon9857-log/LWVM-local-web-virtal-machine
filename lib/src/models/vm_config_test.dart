@@ -1,8 +1,8 @@
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'vm_config.dart';
 
 void main() {
-  group('VmConfigExtension', () {
+  group('VmConfig', () {
     test('getDefaultPortForwards returns default mappings', () {
       const config = VmConfig();
       final defaults = config.getDefaultPortForwards();
@@ -19,6 +19,16 @@ void main() {
 
       expect(forwards[22], equals(3333));
       expect(forwards[8080], equals(8080));
+    });
+
+    test('sharedFolderBackend defaults to webdav', () {
+      const config = VmConfig();
+      expect(config.sharedFolderBackend, equals(SharedFolderBackend.webdav));
+    });
+
+    test('sharedFolderBackend can be configured to virtiofs', () {
+      const config = VmConfig(sharedFolderBackend: SharedFolderBackend.virtiofs);
+      expect(config.sharedFolderBackend, equals(SharedFolderBackend.virtiofs));
     });
   });
 }

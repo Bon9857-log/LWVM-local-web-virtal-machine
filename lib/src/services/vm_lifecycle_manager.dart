@@ -9,8 +9,6 @@ import '../models/vm_instance.dart';
 import 'guest_agent_client.dart';
 import 'qemu_command_builder.dart';
 import 'qemu_binary_resolver.dart';
-import 'windows_whpx_backend.dart';
-import 'android_qemu_extractor.dart';
 
 class VmLifecycleManager {
   final PlatformCapabilities capabilities;
@@ -51,14 +49,7 @@ class VmLifecycleManager {
     _setState(vmId, VmState.starting);
 
     try {
-      String? binaryPath;
-      
-      if (Platform.isAndroid || capabilities.isChromeOS) {
-        final arch = capabilities.nativeArch ?? 'x86_64';
-        binaryPath = await AndroidQemuExtractor.extractQemuBinary(arch);
-      }
-      
-      binaryPath ??= await binaryResolver.resolveBinaryPath(null);
+      final binaryPath = await binaryResolver.resolveBinaryPath(null);
 
       if (binaryPath == null) {
         _setState(vmId, VmState.error);
@@ -78,8 +69,6 @@ class VmLifecycleManager {
         args,
         workingDirectory: p.dirname(vm.overlayPath),
         environment: _buildEnvironment(),
-        stdoutEncoding: utf8,
-        stderrEncoding: utf8,
       );
 
       _runningProcesses[vmId] = process;
@@ -94,11 +83,11 @@ class VmLifecycleManager {
 
   void _setupProcessListeners(String vmId, Process process) {
     process.stdout.listen((data) {
-      _logControllers[vmId]?.add(data);
+      _logControllers[vmId]?.add(utf8.decode(data));
     });
 
     process.stderr.listen((data) {
-      _logControllers[vmId]?.add(data);
+      _logControllers[vmId]?.add(utf8.decode(data));
     });
 
     process.exitCode.then((code) {
@@ -167,18 +156,14 @@ class VmLifecycleManager {
 
   Map<String, String> _buildEnvironment() {
     final env = Platform.environment;
-    final Map<String, String> result = {...env};
-    
     if (capabilities.isChromeOS) {
-      result['QEMU_AUDIO_DRV'] = 'none';
-      result['GUEST_AGENT_SOCK'] = '/tmp';
+      return {
+        ...env,
+        'QEMU_AUDIO_DRV': 'none',
+        'GUEST_AGENT_SOCK': '/tmp',
+      };
     }
-    
-    if (capabilities.hasHyperV) {
-      result['QEMU_AUDIO_DRV'] = 'none';
-    }
-    
-    return result;
+    return env;
   }
 
   Future<void> cleanupAll() async {

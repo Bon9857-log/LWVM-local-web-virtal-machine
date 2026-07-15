@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/vm_instance.dart';
-import '../../models/snapshot.dart';
 import '../widgets/vm_display.dart';
-import '../widgets/port_forward_editor.dart';
 import '../widgets/shared_folder_picker.dart';
-import '../../services/snapshot_manager.dart';
-import 'snapshots_screen.dart';
 
 class VmDetailScreen extends ConsumerStatefulWidget {
   final VmInstance vm;
@@ -27,9 +23,7 @@ class _VmDetailScreenState extends ConsumerState<VmDetailScreen> {
   }
 
   void _startVm() {}
-
   void _stopVm() {}
-
   void _restartVm() {}
 
   @override
@@ -59,7 +53,7 @@ class _VmDetailScreenState extends ConsumerState<VmDetailScreen> {
             IconButton(icon: const Icon(Icons.restart_alt), onPressed: _restartVm),
           ],
         ),
-        body: TabBarView(
+body: TabBarView(
           children: [
             VmDisplay(isRunning: isRunning, vmId: _vm.id),
             _buildSettingsTab(isRunning),
@@ -116,73 +110,32 @@ class _VmDetailScreenState extends ConsumerState<VmDetailScreen> {
   }
 
   Widget _buildSnapshotsTab() {
-    return Column(
+    final snapshots = <String>[];
+    return ListView(
+      padding: const EdgeInsets.all(16),
       children: [
-        Expanded(
-          child: FutureBuilder<List<Snapshot>>(
-            future: _loadSnapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final snapshots = snapshot.data ?? [];
-
-              if (snapshots.isEmpty) {
-                return Center(
-                  child: Text(
-                    'No snapshots',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                );
-              }
-
-              return ListView.builder(
-                itemCount: snapshots.length,
-                itemBuilder: (context, index) {
-                  final snap = snapshots[index];
-                  return ListTile(
-                    leading: const Icon(Icons.save),
-                    title: Text(snap.name),
-                    subtitle: Text(snap.timestamp.toLocal().toString().split('.').first),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.restore),
-                          onPressed: _vm.state == VmState.running ? null : () {},
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () {},
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: FilledButton.icon(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => SnapshotsScreen(vm: _vm),
-              ),
+        if (snapshots.isEmpty)
+          Text('No snapshots', style: Theme.of(context).textTheme.bodyMedium),
+        for (final snapshot in snapshots)
+          ListTile(
+            leading: const Icon(Icons.save),
+            title: Text(snapshot),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(icon: const Icon(Icons.restore), onPressed: () {}),
+                IconButton(icon: const Icon(Icons.delete), onPressed: () {}),
+              ],
             ),
-            icon: const Icon(Icons.open_in_new),
-            label: const Text('Manage Snapshots'),
           ),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.add),
+          label: const Text('Create Snapshot'),
         ),
       ],
     );
-  }
-
-  Future<List<Snapshot>> _loadSnapshots() async {
-    final manager = SnapshotManager();
-    return manager.listSnapshotsWithDetails(_vm);
   }
 
   Widget _buildSharedFoldersTab() {

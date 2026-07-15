@@ -8,6 +8,52 @@ ChromeOS-first VM platform built with Flutter.
 - Android support for ChromeOS ARCVM
 - QEMU binaries for all platforms
 
+## Linux KVM Optimizations
+
+LWVM automatically detects and enables KVM optimizations on Linux:
+
+### KVM Detection
+
+The app checks `/dev/kvm` for read/write permissions and falls back to TCG if unavailable.
+
+### HugePages
+
+When hugepages are configured (`/proc/meminfo` shows `HugePages_Total > 0`), LWVM uses:
+```bash
+-object memory-backend-file,id=mem,size=4G,mem-path=/dev/hugepages,share=on,prealloc=on
+-numa node,memdev=mem
+```
+
+### VirGL 3D Acceleration
+
+Detects `libvirglrenderer.so` via `ldconfig -p` and enables:
+```bash
+-device virtio-gpu-pci,virgl=on
+```
+
+### VirtIO-FS Shared Folders
+
+On kernel 5.4+, detects support and enables VirtIO-FS for host-guest file sharing:
+```bash
+-fsdev local,id=fsdev0,path=/host/path,security_model=mapped-xattr
+-device virtio-fs-pci,fsdev=fsdev0,mount_tag=host_shared,queue-size=1024
+```
+
+### Installation Requirements
+
+Enable KVM and HugPages on Linux:
+```bash
+# Add user to kvm group
+sudo usermod -a -G kvm $USER
+
+# Setup hugepages (example for 4GB)
+echo 2048 | sudo tee /proc/sys/vm/nr_hugepages
+echo mount -t hugetlbfs none /dev/hugepages >> /etc/fstab
+
+# Install virgl for 3D acceleration
+sudo apt install libvirglrenderer0
+```
+
 ## Building
 
 ### Prerequisites
@@ -66,26 +112,3 @@ GitHub Actions builds on all platforms:
 - macOS: DMG
 - Windows: MSIX
 - Android: APK (arm64, x86_64)
-
-### Base Images
-
-Pre-built VM images are available on GitHub Container Registry:
-
-| Image | Description | Size |
-|-------|-------------|------|
-| `alpine:3.20` | Minimal Alpine Linux | ~500MB |
-| `alpine-dev:3.20` | Alpine with dev tools (git, vim, python, node, go, docker-cli) | ~500MB |
-| `minimal-linux:3.20` | Minimal Linux with BusyBox + SSH | ~100MB |
-| `ubuntu:24.04-minimal` | Ubuntu Server 24.04 | ~3GB |
-| `ubuntu-webdev:24.04` | Ubuntu with Docker, VSCode, Node, Python | ~3GB |
-| `ubuntu-datasci:24.04` | Ubuntu with Jupyter, PyTorch, Pandas | ~4GB |
-| `zorin-os:17` | **Premium Desktop** - Polished Zorin OS 17 desktop experience | ~2.5GB (amd64), ~3GB (arm64) |
-
-Pull images with:
-```bash
-# Login to GHCR
-echo $GITHUB_TOKEN | oras login ghcr.io -u $USERNAME --password-stdin
-
-# Pull specific architecture
-oras pull ghcr.io/<owner>/lwvm-images/zorin-os:17-amd64
-```

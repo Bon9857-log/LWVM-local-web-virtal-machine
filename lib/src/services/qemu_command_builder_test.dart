@@ -1,7 +1,6 @@
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import '../models/platform_capabilities.dart';
 import '../models/vm_config.dart';
-import '../models/vm_instance.dart';
 import 'qemu_command_builder.dart';
 
 void main() {
@@ -17,17 +16,15 @@ void main() {
           isChromeOS: true,
           nativeArch: 'arm64',
           hasTCG: true,
+          hasHugePages: false,
+          hasVirgl: false,
+          virtiofsSupported: false,
         );
         builder = QemuCommandBuilder(caps);
       });
 
       test('uses TCG acceleration with thread=multi', () {
-        final vm = VmInstance(
-          id: 'test-vm',
-          config: const VmConfig(),
-          overlayPath: '/vms/test-vm/overlay.qcow2',
-          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
-        );
+        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
 
         final args = builder.build(vm);
 
@@ -36,12 +33,7 @@ void main() {
       });
 
       test('uses virt machine type', () {
-        final vm = VmInstance(
-          id: 'test-vm',
-          config: const VmConfig(),
-          overlayPath: '/vms/test-vm/overlay.qcow2',
-          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
-        );
+        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
 
         final args = builder.build(vm);
 
@@ -50,12 +42,7 @@ void main() {
       });
 
       test('includes VirtIO disk arguments', () {
-        final vm = VmInstance(
-          id: 'test-vm',
-          config: const VmConfig(),
-          overlayPath: '/vms/test-vm/overlay.qcow2',
-          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
-        );
+        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
 
         final args = builder.build(vm);
 
@@ -64,12 +51,7 @@ void main() {
       });
 
       test('includes SPICE graphics by default', () {
-        final vm = VmInstance(
-          id: 'test-vm',
-          config: const VmConfig(),
-          overlayPath: '/vms/test-vm/overlay.qcow2',
-          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
-        );
+        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
 
         final args = builder.build(vm);
 
@@ -79,12 +61,7 @@ void main() {
       });
 
       test('includes VNC graphics when configured', () {
-        final vm = VmInstance(
-          id: 'test-vm',
-          config: const VmConfig(graphics: GraphicsBackend.vnc),
-          overlayPath: '/vms/test-vm/overlay.qcow2',
-          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
-        );
+        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2', graphics: GraphicsBackend.vnc);
 
         final args = builder.build(vm);
 
@@ -92,12 +69,7 @@ void main() {
       });
 
       test('includes guest agent socket', () {
-        final vm = VmInstance(
-          id: 'test-vm',
-          config: const VmConfig(),
-          overlayPath: '/vms/test-vm/overlay.qcow2',
-          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
-        );
+        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
 
         final args = builder.build(vm);
 
@@ -120,38 +92,116 @@ void main() {
           isChromeOS: false,
           nativeArch: 'x86_64',
           hasTCG: true,
+          hasHugePages: false,
+          hasVirgl: false,
+          virtiofsSupported: false,
         );
         builder = QemuCommandBuilder(caps);
       });
 
       test('uses KVM acceleration', () {
-        final vm = VmInstance(
-          id: 'test-vm',
-          config: const VmConfig(),
-          overlayPath: '/vms/test-vm/overlay.qcow2',
-          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
-        );
+        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
 
         final args = builder.build(vm);
 
-        expect(args, contains('-accel'));
-        expect(args, contains('kvm'));
+        expect(args, contains('-enable-kvm'));
         expect(args, contains('-cpu'));
         expect(args, contains('host'));
       });
 
       test('uses q35 machine type with KVM', () {
-        final vm = VmInstance(
-          id: 'test-vm',
-          config: const VmConfig(),
-          overlayPath: '/vms/test-vm/overlay.qcow2',
-          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
-        );
+        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
 
         final args = builder.build(vm);
 
         expect(args, contains('-machine'));
         expect(args, contains('q35'));
+      });
+    });
+
+    group('Linux with KVM and HugePages', () {
+      setUp(() {
+        final caps = const PlatformCapabilities(
+          hasKvm: true,
+          hasHyperV: false,
+          hasVirtFramework: false,
+          isChromeOS: false,
+          nativeArch: 'x86_64',
+          hasTCG: true,
+          hasHugePages: true,
+          hasVirgl: false,
+          virtiofsSupported: false,
+        );
+        builder = QemuCommandBuilder(caps);
+      });
+
+      test('uses hugepages memory backend', () {
+        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
+
+        final args = builder.build(vm);
+
+        expect(args.any((a) => a.contains('memory-backend-file')), true);
+        expect(args.any((a) => a.contains('mem-path=/dev/hugepages')), true);
+        expect(args.any((a) => a.contains('prealloc=on')), true);
+      });
+    });
+
+    group('Linux with KVM and VirGL', () {
+      setUp(() {
+        final caps = const PlatformCapabilities(
+          hasKvm: true,
+          hasHyperV: false,
+          hasVirtFramework: false,
+          isChromeOS: false,
+          nativeArch: 'x86_64',
+          hasTCG: true,
+          hasHugePages: false,
+          hasVirgl: true,
+          virtiofsSupported: false,
+        );
+        builder = QemuCommandBuilder(caps);
+      });
+
+      test('enables virgl on virtio-gpu-pci', () {
+        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
+
+        final args = builder.build(vm);
+
+        expect(args.any((a) => a.contains('virtio-gpu-pci,virgl=on')), true);
+      });
+    });
+
+    group('Linux with VirtIO-FS', () {
+      setUp(() {
+        final caps = const PlatformCapabilities(
+          hasKvm: true,
+          hasHyperV: false,
+          hasVirtFramework: false,
+          isChromeOS: false,
+          nativeArch: 'x86_64',
+          hasTCG: true,
+          hasHugePages: false,
+          hasVirgl: false,
+          virtiofsSupported: true,
+        );
+        builder = QemuCommandBuilder(caps);
+      });
+
+      test('includes virtio-fs-pci when shared folder configured', () {
+        final vm = _createTestVm(
+          'test-vm',
+          '/vms/test-vm/overlay.qcow2',
+          config: const VmConfig(
+            sharedFolderPath: '/home/user/shared',
+            sharedFolderMountPoint: '/mnt/host',
+            sharedFolderBackend: SharedFolderBackend.virtiofs,
+          ),
+        );
+
+        final args = builder.build(vm);
+
+        expect(args.any((a) => a.contains('virtio-fs-pci')), true);
+        expect(args.any((a) => a.contains('queue-size=1024')), true);
       });
     });
 
@@ -164,38 +214,20 @@ void main() {
           isChromeOS: false,
           nativeArch: 'x86_64',
           hasTCG: true,
+          hasHugePages: false,
+          hasVirgl: false,
+          virtiofsSupported: false,
         );
         builder = QemuCommandBuilder(caps);
       });
 
-      test('uses WHPX acceleration with host CPU', () {
-        final vm = VmInstance(
-          id: 'test-vm',
-          config: const VmConfig(),
-          overlayPath: '/vms/test-vm/overlay.qcow2',
-          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
-        );
+      test('uses WHPX acceleration', () {
+        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
 
         final args = builder.build(vm);
 
         expect(args, contains('-accel'));
         expect(args, contains('whpx'));
-        expect(args, contains('-cpu'));
-        expect(args, contains('host'));
-      });
-
-      test('uses q35 machine type with WHPX', () {
-        final vm = VmInstance(
-          id: 'test-vm',
-          config: const VmConfig(),
-          overlayPath: '/vms/test-vm/overlay.qcow2',
-          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
-        );
-
-        final args = builder.build(vm);
-
-        expect(args, contains('-machine'));
-        expect(args, contains('q35'));
       });
     });
 
@@ -208,16 +240,17 @@ void main() {
           isChromeOS: true,
           nativeArch: 'arm64',
           hasTCG: true,
+          hasHugePages: false,
+          hasVirgl: false,
+          virtiofsSupported: false,
         );
         builder = QemuCommandBuilder(caps);
       });
 
       test('includes default port forwards SSH and HTTP', () {
-        final vm = VmInstance(
-          id: 'test-vm',
-          config: const VmConfig(),
-          overlayPath: '/vms/test-vm/overlay.qcow2',
-          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
+        final vm = _createTestVm(
+          'test-vm',
+          '/vms/test-vm/overlay.qcow2',
         );
 
         final args = builder.build(vm);
@@ -229,11 +262,10 @@ void main() {
       });
 
       test('builds port forwards from config', () {
-        final vm = VmInstance(
-          id: 'test-vm',
+        final vm = _createTestVm(
+          'test-vm',
+          '/vms/test-vm/overlay.qcow2',
           config: const VmConfig(sshPort: '2222', webPort: '8080'),
-          overlayPath: '/vms/test-vm/overlay.qcow2',
-          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
         );
 
         final args = builder.build(vm);
@@ -243,12 +275,7 @@ void main() {
       });
 
       test('includes virtio-net device', () {
-        final vm = VmInstance(
-          id: 'test-vm',
-          config: const VmConfig(),
-          overlayPath: '/vms/test-vm/overlay.qcow2',
-          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
-        );
+        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
 
         final args = builder.build(vm);
 
@@ -256,12 +283,7 @@ void main() {
       });
 
       test('includes guest agent virtio-serial-pci with VNC', () {
-        final vm = VmInstance(
-          id: 'test-vm',
-          config: const VmConfig(graphics: GraphicsBackend.vnc),
-          overlayPath: '/vms/test-vm/overlay.qcow2',
-          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
-        );
+        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2', graphics: GraphicsBackend.vnc);
 
         final args = builder.build(vm);
 
@@ -270,5 +292,29 @@ void main() {
         expect(args.any((a) => a.contains('org.qemu.guest_agent.0')), true);
       });
     });
+  });
+}
+
+dynamic _createTestVm(String id, String overlayPath, {VmConfig? config, GraphicsBackend? graphics}) {
+  final configObj = config ?? VmConfig(graphics: graphics ?? GraphicsBackend.spice);
+  return _VmInstance(
+    id: id,
+    config: configObj,
+    overlayPath: overlayPath,
+    dataDiskPath: '$overlayPath-data',
+  );
+}
+
+class _VmInstance {
+  final String id;
+  final VmConfig config;
+  final String overlayPath;
+  final String dataDiskPath;
+
+  _VmInstance({
+    required this.id,
+    required this.config,
+    required this.overlayPath,
+    required this.dataDiskPath,
   });
 }

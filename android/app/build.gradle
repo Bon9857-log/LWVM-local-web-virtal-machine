@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace "com.lwvm.app"
+    namespace "com.example.lwvm"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12097973"
 
@@ -30,20 +30,9 @@ android {
         }
     }
 
-    signingConfigs {
-        release {
-            storeFile = file("../keystore/release.keystore")
-            storePassword = System.getenv("KEYSTORE_PASSWORD")
-            keyAlias = System.getenv("KEY_ALIAS")
-            keyPassword = System.getenv("KEY_PASSWORD")
-        }
-    }
-
     buildTypes {
         release {
-            signingConfig = signingConfigs.release
-            minifyEnabled false
-            shrinkResources false
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 }

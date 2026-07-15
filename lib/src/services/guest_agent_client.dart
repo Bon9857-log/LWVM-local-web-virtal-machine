@@ -44,7 +44,8 @@ class GuestAgentClient {
     if (input != null) {
       params['input-data'] = base64Encode(utf8.encode(input));
     }
-    return _call('guest-exec', params: params);
+    final result = await _call('guest-exec', params: params);
+    return result ?? <String, dynamic>{};
   }
 
   Future<String> readFile(String path, {int? count, int? offset}) async {
@@ -53,11 +54,11 @@ class GuestAgentClient {
     if (offset != null) params['offset'] = offset;
 
     final result = await _call('guest-file-open', params: params);
-    final handle = result['return'] as int;
+    final handle = result?['return'] as int? ?? 0;
 
     try {
       final readResult = await _call('guest-file-read', params: {'handle': handle, 'count': count ?? 4096});
-      final data = readResult['return']['buf-b64'] as String;
+      final data = readResult?['return']?['buf-b64'] as String? ?? '';
       return utf8.decode(base64Decode(data));
     } finally {
       await _call('guest-file-close', params: {'handle': handle});
@@ -70,7 +71,7 @@ class GuestAgentClient {
       'mode': append ? 'a' : 'w',
     };
     final result = await _call('guest-file-open', params: params);
-    final handle = result['return'] as int;
+    final handle = result?['return'] as int? ?? 0;
 
     try {
       final data = base64Encode(utf8.encode(content));
@@ -137,7 +138,34 @@ class GuestAgentClient {
   }
 
   Future<Map<String, dynamic>> _readResponse(Socket socket) async {
-    final data = await socket.transform(utf8.decoder).join().timeout(timeout);
-    return jsonDecode(data) as Map<String, dynamic>;
+    final completer = Completer<Map<String, dynamic>>();
+    final buffer = StringBuffer();
+    late StreamSubscription<List<int>> subscription;
+
+    subscription = socket.listen(
+      (data) {
+        buffer.write(utf8.decode(data));
+      },
+      onError: (e) {
+        if (!completer.isCompleted) {
+          completer.completeError(e);
+        }
+      },
+      onDone: () {
+        if (!completer.isCompleted) {
+          try {
+            final data = buffer.toString();
+            completer.complete(jsonDecode(data) as Map<String, dynamic>);
+          } catch (e) {
+            completer.completeError(e);
+          }
+        }
+      },
+      cancelOnError: true,
+    );
+
+    final response = await completer.future.timeout(timeout);
+    await subscription.cancel();
+    return response;
   }
 }

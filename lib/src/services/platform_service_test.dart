@@ -23,15 +23,24 @@ void main() {
         isChromeOS: false,
         nativeArch: 'x86_64',
         hasTCG: true,
+        hasHugePages: true,
+        hasVirgl: true,
+        virtiofsSupported: true,
       );
 
       final json = caps.toJson();
       expect(json['hasKvm'], isTrue);
       expect(json['nativeArch'], equals('x86_64'));
+      expect(json['hasHugePages'], isTrue);
+      expect(json['hasVirgl'], isTrue);
+      expect(json['virtiofsSupported'], isTrue);
 
       final fromJson = PlatformCapabilities.fromJson(json);
       expect(fromJson.hasKvm, isTrue);
       expect(fromJson.nativeArch, equals('x86_64'));
+      expect(fromJson.hasHugePages, isTrue);
+      expect(fromJson.hasVirgl, isTrue);
+      expect(fromJson.virtiofsSupported, isTrue);
     });
   });
 }

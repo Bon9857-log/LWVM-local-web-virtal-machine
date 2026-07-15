@@ -12,6 +12,9 @@ class PlatformService {
         isChromeOS: false,
         nativeArch: 'unknown',
         hasTCG: true,
+        hasHugePages: false,
+        hasVirgl: false,
+        virtiofsSupported: false,
       );
     }
 
@@ -21,6 +24,9 @@ class PlatformService {
     final hasKvm = isAndroid ? false : await _detectKvm();
     final hasHyperV = await _detectHyperV();
     final hasVirtFramework = await _detectVirtFramework();
+    final hasHugePages = hasKvm && await _detectHugePages();
+    final hasVirgl = hasKvm && await _detectVirgl();
+    final virtiofsSupported = hasKvm && await _detectVirtiofs();
 
     return PlatformCapabilities(
       hasKvm: hasKvm,
@@ -29,6 +35,9 @@ class PlatformService {
       isChromeOS: isChromeOS,
       nativeArch: nativeArch,
       hasTCG: true,
+      hasHugePages: hasHugePages,
+      hasVirgl: hasVirgl,
+      virtiofsSupported: virtiofsSupported,
     );
   }
 
@@ -93,10 +102,55 @@ class PlatformService {
   static Future<bool> _detectKvm() async {
     if (Platform.isLinux) {
       final kvmFile = File('/dev/kvm');
-      return await kvmFile.exists() &&
-          (await Process.run('test', ['-r', '/dev/kvm']).then((r) => r.exitCode == 0));
+      if (!await kvmFile.exists()) return false;
+      final readable = await Process.run('test', ['-r', '/dev/kvm']).then((r) => r.exitCode == 0);
+      final writable = await Process.run('test', ['-w', '/dev/kvm']).then((r) => r.exitCode == 0);
+      return readable && writable;
     }
     return false;
+  }
+
+  static Future<bool> _detectHugePages() async {
+    try {
+      final hugepagesDir = Directory('/dev/hugepages');
+      if (!await hugepagesDir.exists()) return false;
+      final stat = await File('/proc/meminfo').readAsString();
+      return stat.contains('HugePages_Total:') && 
+             !stat.contains('HugePages_Total:       0');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> _detectVirgl() async {
+    try {
+      final result = await Process.run('ldconfig', ['-p']);
+      if (result.exitCode != 0) return false;
+      final libOutput = result.stdout.toString();
+      return libOutput.contains('libvirglrenderer.so') ||
+             libOutput.contains('virgl');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> _detectVirtiofs() async {
+    try {
+      final result = await Process.run('uname', ['-r']);
+      if (result.exitCode != 0) return false;
+      final version = result.stdout.toString().trim();
+      final parts = version.split('.');
+      if (parts.length >= 2) {
+        final major = int.tryParse(parts[0]) ?? 0;
+        final minor = int.tryParse(parts[1]) ?? 0;
+        if (major > 5 || (major == 5 && minor >= 4)) {
+          return true;
+        }
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
   }
 
   static Future<bool> _detectHyperV() async {
@@ -104,31 +158,14 @@ class PlatformService {
     try {
       final result = await Process.run('powershell', [
         '-Command',
-        'Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Hyper-V-Hypervisor -ErrorAction SilentlyContinue | Select-Object -ExpandProperty State',
+        'Get-WmiObject -Class Win32_ComputerSystem | Select-Object -ExpandProperty Model',
       ]);
-      if (result.exitCode == 0 && result.stdout.toString().trim() == 'Enabled') {
-        return true;
-      }
-      try {
-        final wmiResult = await Process.run('powershell', [
-          '-Command',
-          'Get-WmiObject -Class Win32_ComputerSystem | Select-Object -ExpandProperty HypervisorPresent',
-        ]);
-        if (wmiResult.exitCode == 0 && wmiResult.stdout.toString().trim() == 'True') {
-          return true;
-        }
-      } catch (_) {}
-      try {
-        final hvStatus = await Process.run('powershell', [
-          '-Command',
-          '(Get-CimInstance -ClassName Win32_ComputerSystem).Model -match "Virtual|Virtual Machine"',
-        ]);
-        if (hvStatus.exitCode == 0 && hvStatus.stdout.toString().trim() == 'True') {
-          return true;
-        }
-      } catch (_) {}
-    } catch (_) {}
-    return false;
+      return result.exitCode == 0 &&
+          (result.stdout.toString().contains('Virtual') ||
+              result.stdout.toString().contains('Virtual Machine'));
+    } catch (_) {
+      return false;
+    }
   }
 
   static Future<bool> _detectVirtFramework() async {

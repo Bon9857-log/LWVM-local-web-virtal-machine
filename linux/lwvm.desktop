@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=LWVM
+Comment=Lightweight VM Platform
+Exec=lwvm
+Icon=com.example.LWVM
+Terminal=false
+Type=Application
+Categories=System;Emulator;
+Keywords=virtualization;qemu;vm;
+StartupNotify=true

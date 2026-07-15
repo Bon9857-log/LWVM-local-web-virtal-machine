@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/vm_instance.dart';
+import '../../models/vm_config.dart';
 import '../../providers/providers.dart';
 import '../widgets/vm_card.dart';
 import '../widgets/widgets.dart';
 import 'create_vm_wizard.dart';
 import 'vm_detail_screen.dart';
+import 'settings_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});

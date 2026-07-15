@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'package:path/path.dart' as p;
+import '../models/platform_capabilities.dart';
 import '../models/vm_config.dart';
 import '../models/vm_instance.dart';
 import '../models/guest_os_image.dart';
-import '../models/platform_capabilities.dart';
 import 'qemu_binary_resolver.dart';
 import 'qemu_command_builder.dart';
 
@@ -23,7 +23,7 @@ class ProvisioningService {
 
     await Directory(vmDir).create(recursive: true);
 
-    await _createOverlayDisk(overlayPath, config.guestOS);
+    await _createOverlayDisk(overlayPath);
 
     await _createDataDisk(dataDiskPath, config.diskSize);
 
@@ -35,10 +35,10 @@ class ProvisioningService {
     );
   }
 
-  Future<void> _createOverlayDisk(String path, GuestOS os) async {
-    final baseImagePath = await _getBaseImagePath(os);
-    
+  Future<void> _createOverlayDisk(String path) async {
+    final baseImagePath = await _getBaseImagePath();
     final args = ['create', '-f', 'qcow2', '-b', baseImagePath, path];
+
     final qemuPath = await binaryResolver.resolveBinaryPath('qemu-img');
     if (qemuPath != null) {
       await Process.run(qemuPath, args);
@@ -53,7 +53,7 @@ class ProvisioningService {
     }
   }
 
-  Future<String> _getBaseImagePath(GuestOS os) async {
+  Future<String> _getBaseImagePath() async {
     final cacheDir = await _getImageCacheDir();
     final images = {
       GuestOS.alpine: 'alpine.qcow2',
@@ -61,7 +61,7 @@ class ProvisioningService {
       GuestOS.zorin: 'zorin.qcow2',
     };
     
-    final imageName = images[os]!;
+    final imageName = images[GuestOS.alpine]!;
     return p.join(cacheDir, imageName);
   }
 
@@ -76,9 +76,6 @@ class ProvisioningService {
   }
 
   static Future<String> _getHomeDir() async {
-    if (Platform.isAndroid) {
-      return '/data/data/com.lwvm.app/files';
-    }
     var home = Platform.environment['HOME'];
     if (home == null || home.isEmpty) {
       home = Platform.environment['USERPROFILE'];

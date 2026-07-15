@@ -1,6 +1,4 @@
-import 'dart:io';
-import 'package:test/test.dart';
-import 'package:path/path.dart' as p;
+import 'package:flutter_test/flutter_test.dart';
 import '../models/platform_capabilities.dart';
 import '../models/vm_config.dart';
 import '../models/vm_instance.dart';
@@ -35,12 +33,7 @@ void main() {
 
     group('guest agent', () {
       test('getGuestAgent creates client with correct socket path', () async {
-        final vm = VmInstance(
-          id: 'test-vm',
-          config: const VmConfig(),
-          overlayPath: '/vms/test-vm/overlay.qcow2',
-          dataDiskPath: '/vms/test-vm/overlay.qcow2-data',
-        );
+        final vm = _createTestVm('test-vm', '/vms/test-vm/overlay.qcow2');
 
         final client = await manager.getGuestAgent(vm);
 
@@ -48,4 +41,14 @@ void main() {
       });
     });
   });
+}
+
+VmInstance _createTestVm(String id, String overlayPath, {VmConfig? config}) {
+  final configObj = config ?? VmConfig();
+  return VmInstance(
+    id: id,
+    config: configObj,
+    overlayPath: overlayPath,
+    dataDiskPath: '$overlayPath-data',
+  );
 }
