@@ -1,0 +1,50 @@
+#cloud-config
+autoinstall:
+  version: 1
+  identity:
+    hostname: lwvm-zorin
+    username: lwvm
+    password: "$6$rounds=4096$abcd$eW9kb1V3YXNlbnNlY3JldA=="
+  locale: en_US
+  keyboard:
+    layout: us
+  network:
+    version: 2
+    ethernets:
+      all:
+        dhcp4: false
+        addresses: [10.0.2.15/24]
+        gateway4: 10.0.2.2
+        nameservers:
+          addresses: [10.0.2.3]
+  storage:
+    layout:
+      name: lvm
+  apt:
+    preserve_sources_list: false
+    primary:
+      - arches: [default]
+        uri: http://archive.ubuntu.com/ubuntu/
+  packages:
+    - qemu-guest-agent
+    - linux-generic-hwe-24.04
+    - spice-vdagent
+    - flatpak
+    - libreoffice
+    - firefox
+    - vim
+    - curl
+  late-commands:
+    - curtin in-target --target=/target -- sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config || true
+    - curtin in-target --target=/target -- echo 'lwvm:password' | chpasswd || true
+    - curtin in-target --target=/target -- systemctl enable qemu-guest-agent || true
+    - curtin in-target --target=/target -- systemctl enable spice-vdagent || true
+    - curtin in-target --target=/target -- mkdir -p /etc/gdm3 || true
+    - curtin in-target --target=/target -- sed -i 's/#WaylandEnable=false/WaylandEnable=false/' /etc/gdm3/custom.conf || true
+  user-data:
+    - |
+      #cloud-config
+      ssh_pwauth: true
+      runcmd:
+        - cloud-init clean || true
+        - truncate -s 0 /etc/machine-id || true
