@@ -1,26 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'src/ui/screens/screens.dart';
 
 void main() {
   runApp(const ProviderScope(child: LwvmApp()));
 }
 
-class LwvmApp extends StatelessWidget {
+class LwvmApp extends ConsumerWidget {
   const LwvmApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
       title: 'LWVM',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const Scaffold(
-        body: Center(
-          child: Text('LWVM - ChromeOS VM Platform', style: TextStyle(fontSize: 24)),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
         ),
+        useMaterial3: true,
       ),
+      themeMode: ThemeMode.system,
+      home: const DashboardScreen(),
     );
   }
 }

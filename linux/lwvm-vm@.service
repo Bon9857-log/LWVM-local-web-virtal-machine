@@ -1,0 +1,21 @@
+[Unit]
+Description=LWVM Virtual Machine (%i)
+PartOf=lvm.service
+After=lvm.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/lwvm --vm-id=%i --systemd-mode
+Restart=on-failure
+RestartSec=5s
+MemoryMax=4G
+CPUQuota=100%
+DeviceAllow=/dev/kvm rw
+DeviceAllow=/dev/hugepages rw
+ReadWritePaths=%h/.lwvm/vms/%i
+ProtectHome=read-only
+ProtectSystem=strict
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target
